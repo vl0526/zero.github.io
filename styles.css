@@ -31,24 +31,27 @@ body {
     position: relative;
     display: flex; /* Đảm bảo nội dung bên trong là flex */
     align-items: center; /* Căn giữa nội dung theo chiều dọc */
+    justify-content: center; /* Căn giữa nội dung theo chiều ngang */
 }
 
 .moving-text {
     white-space: nowrap;
-    color: #ff69b4; /* Màu sắc nổi bật */
+    color: #000; /* Màu chữ đen */
     font-size: 32px; /* Tăng kích thước chữ */
     font-weight: bold;
     position: absolute; /* Đặt vị trí tuyệt đối để di chuyển */
-    left: 100%; /* Bắt đầu từ bên phải của khung */
-    animation: moveText 10s linear infinite; /* Thay đổi thời gian di chuyển theo ý muốn */
+    animation: moveText 3s ease-in-out infinite; /* Thay đổi thời gian di chuyển theo ý muốn */
 }
 
 @keyframes moveText {
     0% {
-        transform: translateX(100%); /* Bắt đầu từ bên ngoài bên phải */
+        transform: translateX(5px); /* Bắt đầu từ bên trái với 5px */
+    }
+    50% {
+        transform: translateX(-5px); /* Di chuyển 5px sang trái */
     }
     100% {
-        transform: translateX(-100%); /* Kết thúc ở bên ngoài bên trái */
+        transform: translateX(5px); /* Kết thúc ở 5px bên phải */
     }
 }
 
@@ -118,20 +121,20 @@ body {
 
 .subtitle-item span, .translation-item span {
     font-weight: bold;
-    color: #ff69b4;
+    color: #000;
     cursor: pointer;
     text-decoration: underline;
     transition: color 0.3s;
 }
 
 .subtitle-item span:hover, .translation-item span:hover {
-    color: #ff99cc;
+    color: #000;
 }
 
 /* Nút CapCut */
 .capcut-button {
     background-color: rgba(255, 105, 180, 0.8); /* Màu nền nhẹ nhàng với độ mờ */
-    color: #fff;
+    color: #000;
     border: none;
     padding: 15px 30px;
     border-radius: 12px;
@@ -163,7 +166,7 @@ body {
 /* Nút trong phần tùy chọn CapCut */
 .capcut-options button {
     background-color: rgba(255, 105, 180, 0.8); /* Màu nền nhẹ nhàng với độ mờ */
-    color: #fff;
+    color: #000;
     border: none;
     padding: 10px 20px;
     margin: 5px;
@@ -175,7 +178,7 @@ body {
 }
 
 .capcut-options button:hover {
-    background-color: #ff99cc;
+    background-color: #000;
 }
 
 /* Responsive */
