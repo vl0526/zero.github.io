@@ -45,13 +45,13 @@ body {
 
 @keyframes moveText {
     0% {
-        transform: translateX(5px); /* Bắt đầu từ bên trái với 5px */
+        transform: translateX(50px); /* Bắt đầu từ bên trái với 5px */
     }
     50% {
-        transform: translateX(-5px); /* Di chuyển 5px sang trái */
+        transform: translateX(-50px); /* Di chuyển 5px sang trái */
     }
     100% {
-        transform: translateX(5px); /* Kết thúc ở 5px bên phải */
+        transform: translateX(50px); /* Kết thúc ở 5px bên phải */
     }
 }
 
