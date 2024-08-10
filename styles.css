@@ -36,11 +36,11 @@ body {
 
 .moving-text {
     white-space: nowrap;
-    color: #000; /* Màu chữ đen */
+    color: #FFF; /* Màu chữ đen */
     font-size: 32px; /* Tăng kích thước chữ */
     font-weight: bold;
     position: absolute; /* Đặt vị trí tuyệt đối để di chuyển */
-    animation: moveText 3s ease-in-out infinite; /* Thay đổi thời gian di chuyển theo ý muốn */
+    animation: moveText 5s ease-in-out infinite; /* Thay đổi thời gian di chuyển theo ý muốn */
 }
 
 @keyframes moveText {
