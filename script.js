@@ -18,14 +18,6 @@ function downloadCapCut() {
 }
 
 function openCapCutApp() {
-    // Note: Opening local files directly in a browser is generally not supported for security reasons.
-    // However, if this is meant to be a part of a local application, you can use a protocol handler or other methods
-    // that are specific to your environment.
-
-    // Example to show how you might handle it, but this won't work directly from a browser:
-    // window.open('file:///D:/app/capcut/bộ nhớ đệm/CapCut/CapCut.exe --src1', '_blank');
-    
-    // For actual implementation, consider using desktop app methods or custom protocols if necessary.
     alert('Please open the application manually from: D:\\app\\capcut\\bộ nhớ đệm\\CapCut\\CapCut.exe --src1');
 }
 
