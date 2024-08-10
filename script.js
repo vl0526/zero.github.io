@@ -18,7 +18,7 @@ function downloadCapCut() {
 }
 
 function openCapCutApp() {
-    alert('Please open the application manually from: D:\\app\\capcut\\bộ nhớ đệm\\CapCut\\CapCut.exe --src1');
+    window.open('D:\\app\\capcut\\bộ nhớ đệm\\CapCut\\CapCut.exe');
 }
 
 function toggleCapcutOptions() {
