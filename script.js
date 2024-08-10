@@ -13,12 +13,20 @@ function openBilibili() {
     window.open('https://search.bilibili.com/all?keyword=沙雕动画', '_blank');
 }
 
-function downloadCapCut() {
-    window.open('https://lf16-capcut.faceulv.com/obj/capcutpc-packages-us/installer/capcut_capcutpc_0_1.2.6_installer.exe', '_blank');
+function openCapCut() {
+    window.open('https://www.capcut.com/resource/online-subtitle-generator', '_blank');
 }
 
-function openCapCutApp() {
-    window.open('D:\\app\\capcut\\bộ nhớ đệm\\CapCut\\CapCut.exe');
+function openWhisperAI() {
+    window.open('https://freesubtitles.ai', '_blank');
+}
+
+function openWhisperLarge() {
+    window.open('https://anotepad.com/notes/cx7k57eh', '_blank');
+}
+
+function downloadCapCut() {
+    window.open('https://your-download-link.com/capcut_installer.exe', '_blank');
 }
 
 function toggleCapcutOptions() {
