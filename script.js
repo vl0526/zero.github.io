@@ -25,6 +25,10 @@ function openWhisperLarge() {
     window.open('https://anotepad.com/notes/cx7k57eh', '_blank');
 }
 
+function openSubtitleExtractor() {
+    window.open('https://subtitleextractor.com/dashboard', '_blank');
+}
+
 function downloadCapCut() {
     window.open('https://your-download-link.com/capcut_installer.exe', '_blank');
 }
