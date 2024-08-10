@@ -36,7 +36,7 @@ body {
 
 .moving-text {
     white-space: nowrap;
-    color: #FFF; /* Màu chữ đen */
+    color: #AC5865; /* Màu chữ đen */
     font-size: 32px; /* Tăng kích thước chữ */
     font-weight: bold;
     position: absolute; /* Đặt vị trí tuyệt đối để di chuyển */
@@ -121,20 +121,20 @@ body {
 
 .subtitle-item span, .translation-item span {
     font-weight: bold;
-    color: #000;
+    color: #FFF;
     cursor: pointer;
     text-decoration: underline;
     transition: color 0.3s;
 }
 
 .subtitle-item span:hover, .translation-item span:hover {
-    color: #000;
+    color: #FFF;
 }
 
 /* Nút CapCut */
 .capcut-button {
     background-color: rgba(255, 105, 180, 0.8); /* Màu nền nhẹ nhàng với độ mờ */
-    color: #000;
+    color: #FFF;
     border: none;
     padding: 15px 30px;
     border-radius: 12px;
