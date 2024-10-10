@@ -1,61 +1,63 @@
-const startStreamBtn = document.getElementById('startStreamBtn');
-const stopStreamBtn = document.getElementById('stopStreamBtn');
-const screenVideo = document.getElementById('screenVideo');
-const streamLink = document.getElementById('streamLink');
-const linkContainer = document.getElementById('linkContainer');
-const errorMsg = document.getElementById('errorMsg');
+const startBtn = document.getElementById('startBtn');
+const stopBtn = document.getElementById('stopBtn');
+const localVideo = document.getElementById('localVideo');
+const remoteVideo = document.getElementById('remoteVideo');
 
-let mediaStream = null;
+let localStream;
+let peerConnection;
 
-// Hàm để bắt đầu quay màn hình và livestream
-startStreamBtn.addEventListener('click', async () => {
+const iceServer = {
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' } // STUN server
+    ]
+};
+
+startBtn.addEventListener('click', async () => {
     try {
-        // Yêu cầu quyền quay màn hình với âm thanh
-        mediaStream = await navigator.mediaDevices.getDisplayMedia({
+        localStream = await navigator.mediaDevices.getDisplayMedia({
             video: true,
             audio: true
         });
+        localVideo.srcObject = localStream;
 
-        // Hiển thị video quay màn hình cục bộ
-        screenVideo.srcObject = mediaStream;
-        screenVideo.style.display = 'block';
+        peerConnection = new RTCPeerConnection(iceServer);
+        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
-        // Hiển thị nút dừng stream
-        stopStreamBtn.style.display = 'inline-block';
-        startStreamBtn.style.display = 'none';
+        peerConnection.onicecandidate = (event) => {
+            if (event.candidate) {
+                // Gửi candidate đến người khác qua backend hoặc một phương thức khác
+                console.log('New ICE candidate: ', event.candidate);
+            }
+        };
 
-        // Giả lập tạo link livestream
-        const uniqueLink = window.location.href + 'live/' + Date.now();
-        streamLink.href = uniqueLink;
-        streamLink.textContent = uniqueLink;
-        linkContainer.style.display = 'block';
+        peerConnection.ontrack = (event) => {
+            remoteVideo.srcObject = event.streams[0];
+        };
 
-        // TODO: Tích hợp phần WebRTC signaling server để chia sẻ với người khác
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        // Gửi offer đến người khác qua backend hoặc một phương thức khác
+        console.log('Offer: ', offer);
 
-    } catch (err) {
-        console.error("Error starting screen share: ", err);
-        errorMsg.textContent = 'Screen sharing failed. Please try again.';
-        errorMsg.style.display = 'block';
+        startBtn.style.display = 'none';
+        stopBtn.style.display = 'inline-block';
+    } catch (error) {
+        console.error('Error starting livestream:', error);
     }
 });
 
-// Hàm để dừng livestream và tắt video
-stopStreamBtn.addEventListener('click', () => {
-    if (mediaStream) {
-        let tracks = mediaStream.getTracks();
-        tracks.forEach(track => track.stop());
-        screenVideo.style.display = 'none';
-        linkContainer.style.display = 'none';
-        stopStreamBtn.style.display = 'none';
-        startStreamBtn.style.display = 'inline-block';
-        errorMsg.style.display = 'none';
+stopBtn.addEventListener('click', () => {
+    if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localVideo.srcObject = null;
+        remoteVideo.srcObject = null;
+        stopBtn.style.display = 'none';
+        startBtn.style.display = 'inline-block';
+
+        if (peerConnection) {
+            peerConnection.close();
+        }
     }
 });
 
-// Bắt sự kiện khi trang bị đóng hoặc tải lại
-window.addEventListener('beforeunload', () => {
-    if (mediaStream) {
-        let tracks = mediaStream.getTracks();
-        tracks.forEach(track => track.stop());
-    }
-});
+// Các hàm xử lý offer, answer, và ice-candidate sẽ cần được thêm khi có backend
