@@ -17,3 +17,13 @@ video {
     max-width: 800px;
     margin-top: 20px;
 }
+
+.buttons {
+    margin-top: 20px;
+}
+
+button {
+    padding: 10px 20px;
+    margin: 5px;
+    font-size: 16px;
+}
