@@ -23,22 +23,21 @@
 </head>
 <body>
     <video id="remoteVideo" autoplay playsinline></video>
+    <script src="/socket.io/socket.io.js"></script>
     <script>
-        // Cấu hình WebRTC để nhận video từ máy chủ
         const remoteVideo = document.getElementById('remoteVideo');
+        const socket = io();
+        let peerConnection;
 
-        // Giả lập nhận video từ một nguồn (Cần kết nối với backend thực tế)
-        // Chỉ để minh họa, không thể sử dụng được mà không có backend
+        const iceServer = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' } // STUN server
+            ]
+        };
+
         async function startReceivingStream() {
-            const iceServer = {
-                iceServers: [
-                    { urls: 'stun:stun.l.google.com:19302' } // STUN server
-                ]
-            };
+            peerConnection = new RTCPeerConnection(iceServer);
 
-            const peerConnection = new RTCPeerConnection(iceServer);
-
-            // Lắng nghe ICE candidates
             peerConnection.onicecandidate = (event) => {
                 if (event.candidate) {
                     console.log('New ICE candidate: ', event.candidate);
@@ -49,12 +48,12 @@
                 remoteVideo.srcObject = event.streams[0];
             };
 
-            // Tạo một offer và gửi đến backend để lấy answer
-            const offer = await peerConnection.createOffer();
-            await peerConnection.setLocalDescription(offer);
-            console.log('Offer: ', offer);
-
-            // Lấy answer từ backend (không có backend thực tế trong ví dụ này)
+            socket.on('offer', async (offer) => {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+                socket.emit('answer', answer);
+            });
         }
 
         startReceivingStream();
