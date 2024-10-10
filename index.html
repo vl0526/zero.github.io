@@ -3,24 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Livestream Your Screen</title>
+    <title>WebRTC Livestream</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-
     <div class="container">
-        <h1>Livestream Your Screen</h1>
-        <p class="info">Click the button below to start sharing your screen with sound. You will get a link to share with others to watch the livestream.</p>
-        <button id="startStreamBtn">Start Screen Livestream</button>
-        <button id="stopStreamBtn" style="display:none;">Stop Livestream</button>
-        <video id="screenVideo" autoplay controls></video>
-        <div id="linkContainer">
-            <p>Share this link to watch the livestream:</p>
-            <a id="streamLink" href="#" target="_blank">Livestream Link</a>
-        </div>
-        <p id="errorMsg"></p>
+        <h1>WebRTC Livestream</h1>
+        <video id="localVideo" autoplay muted playsinline></video>
+        <video id="remoteVideo" autoplay playsinline></video>
+        <button id="startBtn">Start Livestream</button>
+        <button id="stopBtn" style="display: none;">Stop Livestream</button>
     </div>
-
     <script src="script.js"></script>
 </body>
 </html>
