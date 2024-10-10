@@ -5,7 +5,6 @@ const remoteVideo = document.getElementById('remoteVideo');
 const shareLinkContainer = document.getElementById('shareLinkContainer');
 const shareLinkInput = document.getElementById('shareLink');
 
-// Các biến để lưu trữ luồng video và kết nối
 let localStream;
 let peerConnection;
 const iceServer = {
@@ -13,6 +12,8 @@ const iceServer = {
         { urls: 'stun:stun.l.google.com:19302' } // STUN server
     ]
 };
+
+const socket = io();
 
 startBtn.addEventListener('click', async () => {
     try {
@@ -27,8 +28,7 @@ startBtn.addEventListener('click', async () => {
 
         peerConnection.onicecandidate = (event) => {
             if (event.candidate) {
-                // Gửi candidate đến người khác (qua backend)
-                console.log('New ICE candidate: ', event.candidate);
+                socket.emit('candidate', event.candidate);
             }
         };
 
@@ -38,11 +38,17 @@ startBtn.addEventListener('click', async () => {
 
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
-        // Gửi offer đến người khác (qua backend)
-        console.log('Offer: ', offer);
-        
-        // Hiển thị link chia sẻ
-        const shareableLink = `https://yourdomain.com/video.html`; // Thay bằng domain của bạn
+        socket.emit('offer', offer);
+
+        socket.on('answer', async (answer) => {
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+        });
+
+        socket.on('candidate', (candidate) => {
+            peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+        });
+
+        const shareableLink = `${window.location.href}video.html`; // Link chia sẻ
         shareLinkInput.value = shareableLink;
         shareLinkContainer.style.display = 'block';
 
