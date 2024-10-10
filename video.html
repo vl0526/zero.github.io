@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watch Live Video</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f4;
+        }
+
+        video {
+            width: 80%;
+            max-width: 800px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <video id="remoteVideo" autoplay playsinline></video>
+    <script>
+        // Cấu hình WebRTC để nhận video từ máy chủ
+        const remoteVideo = document.getElementById('remoteVideo');
+
+        // Giả lập nhận video từ một nguồn (Cần kết nối với backend thực tế)
+        // Chỉ để minh họa, không thể sử dụng được mà không có backend
+        async function startReceivingStream() {
+            const iceServer = {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' } // STUN server
+                ]
+            };
+
+            const peerConnection = new RTCPeerConnection(iceServer);
+
+            // Lắng nghe ICE candidates
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    console.log('New ICE candidate: ', event.candidate);
+                }
+            };
+
+            peerConnection.ontrack = (event) => {
+                remoteVideo.srcObject = event.streams[0];
+            };
+
+            // Tạo một offer và gửi đến backend để lấy answer
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+            console.log('Offer: ', offer);
+
+            // Lấy answer từ backend (không có backend thực tế trong ví dụ này)
+        }
+
+        startReceivingStream();
+    </script>
+</body>
+</html>
