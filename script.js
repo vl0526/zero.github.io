@@ -1,39 +1,61 @@
-function openDouyin() {
-    window.open('https://www.douyin.com/search/沙雕动画', '_blank');
-    window.open('https://bravedown.com/douyin-video-downloader', '_blank');
-}
+const startStreamBtn = document.getElementById('startStreamBtn');
+const stopStreamBtn = document.getElementById('stopStreamBtn');
+const screenVideo = document.getElementById('screenVideo');
+const streamLink = document.getElementById('streamLink');
+const linkContainer = document.getElementById('linkContainer');
+const errorMsg = document.getElementById('errorMsg');
 
-function openIxigua() {
-    window.open('https://www.ixigua.com/search/沙雕动画', '_blank');
-    window.open('https://bravedown.com/ixigua-video-downloader', '_blank');
-}
+let mediaStream = null;
 
-function openBilibili() {
-    window.open('https://bravedown.com/bilibili-downloader', '_blank');
-    window.open('https://search.bilibili.com/all?keyword=沙雕动画', '_blank');
-}
+// Hàm để bắt đầu quay màn hình và livestream
+startStreamBtn.addEventListener('click', async () => {
+    try {
+        // Yêu cầu quyền quay màn hình với âm thanh
+        mediaStream = await navigator.mediaDevices.getDisplayMedia({
+            video: true,
+            audio: true
+        });
 
-function openCapCut() {
-    window.open('https://www.capcut.com/resource/online-subtitle-generator', '_blank');
-}
+        // Hiển thị video quay màn hình cục bộ
+        screenVideo.srcObject = mediaStream;
+        screenVideo.style.display = 'block';
 
-function openWhisperAI() {
-    window.open('https://freesubtitles.ai', '_blank');
-}
+        // Hiển thị nút dừng stream
+        stopStreamBtn.style.display = 'inline-block';
+        startStreamBtn.style.display = 'none';
 
-function openWhisperLarge() {
-    window.open('https://anotepad.com/notes/cx7k57eh', '_blank');
-}
+        // Giả lập tạo link livestream
+        const uniqueLink = window.location.href + 'live/' + Date.now();
+        streamLink.href = uniqueLink;
+        streamLink.textContent = uniqueLink;
+        linkContainer.style.display = 'block';
 
-function openSubtitleExtractor() {
-    window.open('https://subtitleextractor.com/dashboard', '_blank');
-}
+        // TODO: Tích hợp phần WebRTC signaling server để chia sẻ với người khác
 
-function downloadCapCut() {
-    window.open('https://your-download-link.com/capcut_installer.exe', '_blank');
-}
+    } catch (err) {
+        console.error("Error starting screen share: ", err);
+        errorMsg.textContent = 'Screen sharing failed. Please try again.';
+        errorMsg.style.display = 'block';
+    }
+});
 
-function toggleCapcutOptions() {
-    const options = document.getElementById('capcut-options');
-    options.style.display = options.style.display === 'none' || options.style.display === '' ? 'block' : 'none';
-}
+// Hàm để dừng livestream và tắt video
+stopStreamBtn.addEventListener('click', () => {
+    if (mediaStream) {
+        let tracks = mediaStream.getTracks();
+        tracks.forEach(track => track.stop());
+        screenVideo.style.display = 'none';
+        linkContainer.style.display = 'none';
+        stopStreamBtn.style.display = 'none';
+        startStreamBtn.style.display = 'inline-block';
+        errorMsg.style.display = 'none';
+    }
+});
+
+// Bắt sự kiện khi trang bị đóng hoặc tải lại
+window.addEventListener('beforeunload', () => {
+    if (mediaStream) {
+        let tracks = mediaStream.getTracks();
+        tracks.forEach(track => track.stop());
+    }
+});
