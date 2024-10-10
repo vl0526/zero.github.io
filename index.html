@@ -1,49 +1,26 @@
-<html lang="en"><head>
+<!DOCTYPE html>
+<html lang="en">
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZERO SUB</title>
+    <title>Livestream Your Screen</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container">
-        <div class="rectangle">
-            <div class="moving-text">ZERO SUB</div>
-        </div>
-        <div class="links">
-            <div class="link-item" onclick="openDouyin()">Douyin</div>
-            <div class="link-item" onclick="openIxigua()">Ixigua</div>
-            <div class="link-item" onclick="openBilibili()">Bilibili</div>
-        </div>
-        <div class="subtitle-section">
-            <div class="subtitle-item">
-                CapCut: <span onclick="openCapCut()">63%</span>
-            </div>
-            <div class="subtitle-item">
-                Whisper-medium: <span onclick="openWhisperAI()">75%</span>
-            </div>
-            <div class="subtitle-item">
-                Whisper-v3: <span onclick="openWhisperLarge()">85%</span>
-            </div>
-            <div class="subtitle-item">
-    Screen(2h): <span onclick="openSubtitleExtractor()">99%</span>
-</div>
 
+    <div class="container">
+        <h1>Livestream Your Screen</h1>
+        <p class="info">Click the button below to start sharing your screen with sound. You will get a link to share with others to watch the livestream.</p>
+        <button id="startStreamBtn">Start Screen Livestream</button>
+        <button id="stopStreamBtn" style="display:none;">Stop Livestream</button>
+        <video id="screenVideo" autoplay controls></video>
+        <div id="linkContainer">
+            <p>Share this link to watch the livestream:</p>
+            <a id="streamLink" href="#" target="_blank">Livestream Link</a>
         </div>
-        <div class="translation-section">
-            <div class="translation-item">
-                Chat-GPT: 85% <span onclick="window.open('https://anotepad.com/notes/srht4f8n', '_blank')">Thủ công</span>
-            </div>
-            <div class="translation-item">
-                GPT-Pro: 90% - 95% <span onclick="window.open('https://gptsubtitler.com', '_blank')">GPT-Pro</span>
-            </div>
-        </div>
-        <button class="capcut-button" onclick="toggleCapcutOptions()">Cap Cut</button>
-        <div class="capcut-options" id="capcut-options">
-            <button onclick="downloadCapCut()">Download CapCut</button>
-        </div>
+        <p id="errorMsg"></p>
     </div>
 
     <script src="script.js"></script>
-
-
-</body></html>
+</body>
+</html>
