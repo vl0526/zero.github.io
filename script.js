@@ -5,6 +5,7 @@ const remoteVideo = document.getElementById('remoteVideo');
 const shareLinkContainer = document.getElementById('shareLinkContainer');
 const shareLinkInput = document.getElementById('shareLink');
 
+// Các biến để lưu trữ luồng video và kết nối
 let localStream;
 let peerConnection;
 const iceServer = {
@@ -41,8 +42,8 @@ startBtn.addEventListener('click', async () => {
         console.log('Offer: ', offer);
         
         // Hiển thị link chia sẻ
-        const shareableLink = window.location.href;
-        shareLinkInput.value = shareableLink; // Đây chỉ là ví dụ, bạn cần thay đổi
+        const shareableLink = `https://yourdomain.com/video.html`; // Thay bằng domain của bạn
+        shareLinkInput.value = shareableLink;
         shareLinkContainer.style.display = 'block';
 
         startBtn.style.display = 'none';
@@ -65,5 +66,3 @@ stopBtn.addEventListener('click', () => {
         }
     }
 });
-
-// Các hàm xử lý offer, answer, và ice-candidate sẽ cần được thêm khi có backend
