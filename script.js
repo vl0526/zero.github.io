@@ -2,10 +2,11 @@ const startBtn = document.getElementById('startBtn');
 const stopBtn = document.getElementById('stopBtn');
 const localVideo = document.getElementById('localVideo');
 const remoteVideo = document.getElementById('remoteVideo');
+const shareLinkContainer = document.getElementById('shareLinkContainer');
+const shareLinkInput = document.getElementById('shareLink');
 
 let localStream;
 let peerConnection;
-
 const iceServer = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' } // STUN server
@@ -25,7 +26,7 @@ startBtn.addEventListener('click', async () => {
 
         peerConnection.onicecandidate = (event) => {
             if (event.candidate) {
-                // Gửi candidate đến người khác qua backend hoặc một phương thức khác
+                // Gửi candidate đến người khác (qua backend)
                 console.log('New ICE candidate: ', event.candidate);
             }
         };
@@ -36,8 +37,13 @@ startBtn.addEventListener('click', async () => {
 
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
-        // Gửi offer đến người khác qua backend hoặc một phương thức khác
+        // Gửi offer đến người khác (qua backend)
         console.log('Offer: ', offer);
+        
+        // Hiển thị link chia sẻ
+        const shareableLink = window.location.href;
+        shareLinkInput.value = shareableLink; // Đây chỉ là ví dụ, bạn cần thay đổi
+        shareLinkContainer.style.display = 'block';
 
         startBtn.style.display = 'none';
         stopBtn.style.display = 'inline-block';
