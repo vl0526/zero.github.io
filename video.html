@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube Video & Chat</title>
+    <title>YouTube Video with Custom Controls</title>
     <style>
         body {
             margin: 0;
@@ -18,6 +18,7 @@
             justify-content: center;
             align-items: center;
             position: relative;
+            background-color: black;
         }
         .video-frame {
             width: 90%;
@@ -25,6 +26,7 @@
             border-radius: 20px;
             overflow: hidden;
             cursor: pointer;
+            position: relative;
         }
         .chat-container {
             width: 30%;
@@ -36,6 +38,20 @@
             height: 100%;
             border: none;
         }
+        .progress-bar-container {
+            position: absolute;
+            bottom: 10px;
+            left: 0;
+            width: 100%;
+            height: 10px;
+            background-color: rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+        }
+        .progress-bar {
+            width: 0;
+            height: 100%;
+            background-color: red;
+        }
     </style>
 </head>
 <body>
@@ -44,6 +60,9 @@
     <div class="video-container">
         <div class="video-frame" id="videoFrame">
             <div id="player"></div>
+            <div class="progress-bar-container" id="progressBarContainer">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
         </div>
     </div>
 
@@ -76,13 +95,13 @@
                 playerVars: {
                     'autoplay': 1,
                     'controls': 0,   // Ẩn các nút điều khiển
-                    'modestbranding': 1, // Ẩn logo YouTube ở góc
+                    'modestbranding': 1, // Giảm kích thước logo
                     'rel': 0,        // Không hiển thị video liên quan
-                    'showinfo': 0,   // Ẩn tiêu đề video
                     'iv_load_policy': 3, // Ẩn chú thích
                 },
                 events: {
-                    'onReady': onPlayerReady
+                    'onReady': onPlayerReady,
+                    'onStateChange': onPlayerStateChange
                 }
             });
         }
@@ -100,9 +119,34 @@
                 }
             });
 
-            // Tự động phát video khi sẵn sàng
-            player.playVideo();
+            // Cập nhật thanh tua mỗi giây
+            setInterval(updateProgressBar, 1000);
         }
+
+        function onPlayerStateChange(event) {
+            if (event.data === YT.PlayerState.PLAYING) {
+                updateProgressBar(); // Cập nhật thanh tua khi phát
+            }
+        }
+
+        // Cập nhật thanh tua
+        function updateProgressBar() {
+            var progressBar = document.getElementById('progressBar');
+            var duration = player.getDuration();
+            var currentTime = player.getCurrentTime();
+            var percentage = (currentTime / duration) * 100;
+            progressBar.style.width = percentage + '%';
+        }
+
+        // Thêm sự kiện click để tua video
+        var progressBarContainer = document.getElementById('progressBarContainer');
+        progressBarContainer.addEventListener('click', function(e) {
+            var containerWidth = progressBarContainer.offsetWidth;
+            var clickPosition = e.offsetX;
+            var clickPercentage = clickPosition / containerWidth;
+            var newTime = player.getDuration() * clickPercentage;
+            player.seekTo(newTime, true); // Tua đến vị trí mới
+        });
 
         // Load YouTube Iframe API
         var tag = document.createElement('script');
