@@ -24,8 +24,39 @@
             height: 90%;
             border-radius: 20px; /* Viền cong */
             overflow: hidden;
-            cursor: pointer; /* Thêm biểu tượng con trỏ tay */
+            position: relative;
         }
+        /* Lớp phủ để che đi watermark và các nút không mong muốn */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* Không cản trở người dùng tương tác với video */
+        }
+
+        /* Phủ che watermark */
+        .overlay-watermark {
+            position: absolute;
+            bottom: 40px; /* Vị trí của watermark (gần dưới cùng video) */
+            right: 0;
+            width: 120px;
+            height: 40px;
+            background-color: transparent;
+        }
+
+        /* Phủ che tiêu đề video và các nút trên cùng */
+        .overlay-title {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 60px; /* Chiều cao đủ để che tiêu đề và nút tìm kiếm */
+            background-color: transparent;
+        }
+
+        /* Khung chat */
         .chat-container {
             width: 30%;
             height: 100%;
@@ -36,8 +67,9 @@
             height: 100%;
             border: none;
         }
+        /* Ẩn các controls mặc định */
         .controls {
-            display: none; /* Ẩn các nút điều khiển mặc định của YouTube */
+            display: none;
         }
     </style>
 </head>
@@ -47,6 +79,11 @@
     <div class="video-container">
         <div class="video-frame" id="videoFrame">
             <iframe id="youtubeVideo" frameborder="0" allow="autoplay"></iframe>
+            <!-- Các lớp phủ để che watermark và tiêu đề -->
+            <div class="overlay">
+                <div class="overlay-watermark"></div>
+                <div class="overlay-title"></div>
+            </div>
         </div>
     </div>
 
