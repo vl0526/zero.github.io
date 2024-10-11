@@ -70,7 +70,7 @@
         var videoId = urlParams.get('videoId') || 'BFE9aPBg6Gw'; // Thay đổi ID video ở đây
 
         // Đặt URL cho video
-        var playerUrl = 'https://www.youtube.com/embed/' + videoId + '?autoplay=1&controls=0&loop=1&playlist=' + videoId;
+        var playerUrl = 'https://www.youtube.com/embed/' + videoId + '?autoplay=1&controls=0&loop=1&playlist=' + videoId + '&mute=1'; // Đã thêm &mute=1 để tắt âm thanh
         document.getElementById('videoPlayer').src = playerUrl;
 
         // Đặt URL cho chat YouTube
