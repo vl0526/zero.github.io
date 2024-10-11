@@ -40,6 +40,8 @@
             border-left: 2px solid #ccc; /* Đường viền phân cách */
             background-color: rgba(255, 255, 255, 0.1); /* Nền mờ cho khung chat */
             position: relative;
+            z-index: 1; /* Đảm bảo khung chat nằm trên video */
+            pointer-events: auto; /* Cho phép tương tác với khung chat */
         }
     </style>
 </head>
