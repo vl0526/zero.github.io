@@ -17,12 +17,14 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            position: relative;
         }
         .video-frame {
             width: 90%;
             height: 90%;
             border-radius: 20px; /* Viền cong */
             overflow: hidden;
+            cursor: pointer; /* Thêm biểu tượng con trỏ tay */
         }
         .chat-container {
             width: 30%;
@@ -35,20 +37,7 @@
             border: none;
         }
         .controls {
-            text-align: center;
-            margin-top: 10px;
-        }
-        button {
-            padding: 10px 15px;
-            margin: 5px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            cursor: pointer;
-            border-radius: 5px;
-        }
-        button:hover {
-            background-color: #45a049;
+            display: none; /* Ẩn các nút điều khiển mặc định của YouTube */
         }
     </style>
 </head>
@@ -56,8 +45,8 @@
 
     <!-- Video YouTube -->
     <div class="video-container">
-        <div class="video-frame">
-            <iframe id="youtubeVideo" frameborder="0" allowfullscreen></iframe>
+        <div class="video-frame" id="videoFrame">
+            <iframe id="youtubeVideo" frameborder="0" allow="autoplay"></iframe>
         </div>
     </div>
 
@@ -67,13 +56,15 @@
     </div>
 
     <script>
+        var player;
+
         // Lấy video ID từ URL
         var urlParams = new URLSearchParams(window.location.search);
         var videoId = urlParams.get('videoId');
 
         if (videoId) {
             // Thêm video ID vào iframe video
-            var videoUrl = 'https://www.youtube.com/embed/' + videoId + '?enablejsapi=1&controls=0'; // controls=0 để ẩn các nút điều khiển YouTube
+            var videoUrl = 'https://www.youtube.com/embed/' + videoId + '?enablejsapi=1&autoplay=1&controls=0'; // autoplay=1 để tự động phát, controls=0 để ẩn nút điều khiển
             document.getElementById('youtubeVideo').src = videoUrl;
 
             // Thêm chat live vào iframe chat
@@ -84,8 +75,6 @@
         }
 
         // YouTube Iframe API để điều khiển video
-        var player;
-
         function onYouTubeIframeAPIReady() {
             player = new YT.Player('youtubeVideo', {
                 events: {
@@ -95,41 +84,20 @@
         }
 
         function onPlayerReady(event) {
-            var controlsDiv = document.createElement('div');
-            controlsDiv.classList.add('controls');
+            // Bắt sự kiện click vào video để phát/dừng
+            var videoFrame = document.getElementById('videoFrame');
+            videoFrame.addEventListener('click', function() {
+                var playerState = player.getPlayerState();
 
-            var playButton = document.createElement('button');
-            playButton.innerHTML = 'Phát';
-            playButton.onclick = function() {
-                player.playVideo();
-            };
+                if (playerState === YT.PlayerState.PLAYING) {
+                    player.pauseVideo();
+                } else {
+                    player.playVideo();
+                }
+            });
 
-            var pauseButton = document.createElement('button');
-            pauseButton.innerHTML = 'Dừng';
-            pauseButton.onclick = function() {
-                player.pauseVideo();
-            };
-
-            var seekForwardButton = document.createElement('button');
-            seekForwardButton.innerHTML = 'Tua +10s';
-            seekForwardButton.onclick = function() {
-                var currentTime = player.getCurrentTime();
-                player.seekTo(currentTime + 10, true);
-            };
-
-            var seekBackwardButton = document.createElement('button');
-            seekBackwardButton.innerHTML = 'Tua -10s';
-            seekBackwardButton.onclick = function() {
-                var currentTime = player.getCurrentTime();
-                player.seekTo(currentTime - 10, true);
-            };
-
-            controlsDiv.appendChild(playButton);
-            controlsDiv.appendChild(pauseButton);
-            controlsDiv.appendChild(seekForwardButton);
-            controlsDiv.appendChild(seekBackwardButton);
-
-            document.body.appendChild(controlsDiv);
+            // Tự động phát video khi sẵn sàng
+            player.playVideo();
         }
 
         // Load YouTube Iframe API
