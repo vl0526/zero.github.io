@@ -9,7 +9,7 @@
             margin: 0;
             display: flex;
             height: 100vh;
-            background-color: black;
+            background-color: #000; /* Nền đen cho video */
             font-family: Arial, sans-serif;
             overflow: hidden; /* Ẩn cuộn trang */
         }
@@ -42,18 +42,6 @@
             position: relative;
             z-index: 2; /* Đảm bảo khung chat nằm trên video */
         }
-
-        /* Thêm một lớp phủ để bắt sự kiện */
-        .overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: transparent; /* Trong suốt để không làm mất nội dung */
-            z-index: 1; /* Đặt lớp này giữa video và chat */
-            pointer-events: none; /* Không cản trở sự tương tác */
-        }
     </style>
 </head>
 <body>
@@ -61,7 +49,7 @@
     <!-- Phần video -->
     <div class="video-container">
         <iframe id="videoPlayer" 
-                src="https://www.youtube.com/embed/BFE9aPBg6Gw?autoplay=1&controls=0&loop=1&playlist=BFE9aPBg6Gw" 
+                src="" 
                 allowfullscreen allow="autoplay">
         </iframe>
     </div>
@@ -69,7 +57,7 @@
     <!-- Phần chat -->
     <div class="chat-container">
         <iframe id="youtubeChat" 
-                src="https://www.youtube.com/live_chat?v=BFE9aPBg6Gw&embed_domain=" + window.location.hostname 
+                src="" 
                 frameborder="0" 
                 style="width: 100%; height: 100%;">
         </iframe>
@@ -78,15 +66,19 @@
     <script>
         // Lấy video ID từ URL nếu có
         var urlParams = new URLSearchParams(window.location.search);
-        var videoId = urlParams.get('videoId') || 'BFE9aPBg6Gw'; // Thay đổi ID video ở đây
+        var videoId = urlParams.get('videoId'); // Lấy ID video từ URL
 
-        // Đặt URL cho chat YouTube
-        var chatUrl = 'https://www.youtube.com/live_chat?v=' + videoId + '&embed_domain=' + window.location.hostname;
-        document.getElementById('youtubeChat').src = chatUrl;
+        if (videoId) {
+            // Đặt URL cho chat YouTube
+            var chatUrl = 'https://www.youtube.com/live_chat?v=' + videoId + '&embed_domain=' + window.location.hostname;
+            document.getElementById('youtubeChat').src = chatUrl;
 
-        // Đặt URL cho video
-        var playerUrl = 'https://www.youtube.com/embed/' + videoId + '?autoplay=1&controls=0&loop=1&playlist=' + videoId;
-        document.getElementById('videoPlayer').src = playerUrl;
+            // Đặt URL cho video và tự động phát
+            var playerUrl = 'https://www.youtube.com/embed/' + videoId + '?autoplay=1&controls=0&loop=1&playlist=' + videoId + '&mute=1';
+            document.getElementById('videoPlayer').src = playerUrl;
+        } else {
+            alert("No video ID found");
+        }
     </script>
 </body>
 </html>
