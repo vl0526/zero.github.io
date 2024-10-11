@@ -10,7 +10,7 @@
             display: flex;
             height: 100vh;
             background-color: #000; /* Nền đen cho video */
-            font-family: Arial, sans-serif;
+            font-family: 'Poppins', sans-serif; /* Font hiện đại */
             overflow: hidden; /* Ẩn cuộn trang */
         }
 
@@ -20,6 +20,7 @@
             height: 100%;
             position: relative;
             overflow: hidden; /* Ẩn phần video ra ngoài khung */
+            border-radius: 0 20px 20px 0; /* Viền cong cho video */
         }
 
         /* Video sẽ được phát như nền */
@@ -31,16 +32,19 @@
             top: 0;
             left: 0;
             z-index: -1; /* Đặt video dưới các phần tử khác */
+            filter: blur(5px); /* Làm mờ video để tạo cảm giác lofi */
         }
 
         /* Khung chat bên phải */
         .chat-container {
             width: 30%; /* Khung chat chiếm 30% */
             height: 100%;
-            border-left: 2px solid #ccc; /* Đường viền phân cách */
+            border-left: 2px solid #ff4081; /* Đường viền phân cách màu hồng */
             background-color: rgba(255, 255, 255, 0.1); /* Nền mờ cho khung chat */
             position: relative;
             z-index: 2; /* Đảm bảo khung chat nằm trên video */
+            border-radius: 20px; /* Viền cong cho khung chat */
+            padding: 10px; /* Padding cho khung chat */
         }
     </style>
 </head>
