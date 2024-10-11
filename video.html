@@ -50,8 +50,7 @@
     <div class="video-container">
         <iframe id="videoPlayer" 
                 src="" 
-                allowfullscreen allow="autoplay; encrypted-media" 
-                autoplay>
+                allowfullscreen allow="autoplay; encrypted-media">
         </iframe>
     </div>
 
@@ -67,7 +66,7 @@
     <script>
         // Lấy video ID từ URL nếu có
         var urlParams = new URLSearchParams(window.location.search);
-        var videoId = urlParams.get('videoId') || 'BFE9aPBg6Gw'; // Thay đổi ID video ở đây
+        var videoId = urlParams.get('videoId') || 'BFE9aPBg6Gw'; // ID video mặc định nếu không có
 
         // Đặt URL cho video
         var playerUrl = 'https://www.youtube.com/embed/' + videoId + '?autoplay=1&controls=0&loop=1&playlist=' + videoId + '&mute=0';
@@ -76,16 +75,6 @@
         // Đặt URL cho chat YouTube
         var chatUrl = 'https://www.youtube.com/live_chat?v=' + videoId + '&embed_domain=' + window.location.hostname;
         document.getElementById('youtubeChat').src = chatUrl;
-
-        // Sự kiện khi video được tải
-        document.getElementById('videoPlayer').onload = function() {
-            var videoIframe = document.getElementById('videoPlayer');
-            var video = videoIframe.contentWindow.document.querySelector('video');
-            if (video) {
-                video.muted = false; // Bật âm thanh
-                video.play(); // Phát video
-            }
-        };
     </script>
 </body>
 </html>
