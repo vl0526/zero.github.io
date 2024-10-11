@@ -33,7 +33,7 @@
             position: relative;
         }
 
-        /* Ẩn các phần điều khiển của YouTube (logo, kênh, tiêu đề, ...) */
+        /* Ẩn hoàn toàn các phần điều khiển của YouTube (logo, kênh, tiêu đề, ...) */
         iframe {
             width: 100%;
             height: 100%;
@@ -72,6 +72,7 @@
             top: -3px; /* Đặt nút tròn vào giữa thanh */
             right: 0;
             transform: translateX(50%);
+            cursor: pointer;
         }
 
         /* Khung chat bên phải */
@@ -127,7 +128,11 @@
                     'controls': 0,    // Ẩn hoàn toàn các nút điều khiển
                     'modestbranding': 1, // Giảm kích thước logo YouTube
                     'rel': 0,
-                    'iv_load_policy': 3 // Ẩn các chú thích
+                    'iv_load_policy': 3, // Ẩn các chú thích
+                    'fs': 0, // Ẩn nút fullscreen
+                    'disablekb': 1, // Vô hiệu hóa bàn phím
+                    'showinfo': 0, // Ẩn thông tin video
+                    'branding': 0 // Ẩn logo YouTube
                 },
                 events: {
                     'onReady': onPlayerReady,
@@ -146,7 +151,7 @@
                     player.playVideo();
                 }
             });
-            setInterval(updateProgressBar, 1); // Cập nhật thanh tua mỗi 0.5 giây
+            setInterval(updateProgressBar, 500); // Cập nhật thanh tua mỗi 0.5 giây
         }
 
         function onPlayerStateChange(event) {
@@ -170,14 +175,36 @@
             progressCircle.style.transform = `translateX(${percentage}%)`;
         }
 
-        // Sự kiện click vào thanh tua để tua video
+        // Di chuyển thanh tua khi người dùng kéo chấm tròn
+        var isDragging = false;
+
         var progressBarContainer = document.getElementById('progressBarContainer');
-        progressBarContainer.addEventListener('click', function(e) {
-            var containerWidth = progressBarContainer.offsetWidth;
-            var clickPosition = e.offsetX;
-            var clickPercentage = clickPosition / containerWidth;
-            var newTime = player.getDuration() * clickPercentage;
-            player.seekTo(newTime, true); // Tua đến vị trí mới
+        var progressCircle = document.getElementById('progressCircle');
+
+        progressCircle.addEventListener('mousedown', function() {
+            isDragging = true;
+        });
+
+        document.addEventListener('mouseup', function() {
+            if (isDragging) {
+                isDragging = false;
+                var containerWidth = progressBarContainer.offsetWidth;
+                var currentWidth = parseFloat(progressBar.style.width);
+                var newTime = (currentWidth / 100) * player.getDuration();
+                player.seekTo(newTime, true);
+                player.playVideo(); // Tự động phát lại video khi thả chuột
+            }
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (isDragging) {
+                var containerWidth = progressBarContainer.offsetWidth;
+                var clickPosition = e.clientX - progressBarContainer.getBoundingClientRect().left;
+                var percentage = Math.min(Math.max(clickPosition / containerWidth, 0), 1) * 100;
+
+                progressBar.style.width = percentage + '%';
+                progressCircle.style.transform = `translateX(${percentage}%)`;
+            }
         });
 
         // Thêm YouTube API script
