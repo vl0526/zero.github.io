@@ -70,14 +70,14 @@
         var videoId = urlParams.get('videoId') || 'BFE9aPBg6Gw'; // Thay đổi ID video ở đây
 
         // Đặt URL cho video
-        var playerUrl = 'https://www.youtube.com/embed/' + videoId + '?autoplay=1&controls=0&loop=1&playlist=' + videoId;
+        var playerUrl = 'https://www.youtube.com/embed/' + videoId + '?autoplay=1&controls=0&loop=1&playlist=' + videoId + '&mute=0';
         document.getElementById('videoPlayer').src = playerUrl;
 
         // Đặt URL cho chat YouTube
         var chatUrl = 'https://www.youtube.com/live_chat?v=' + videoId + '&embed_domain=' + window.location.hostname;
         document.getElementById('youtubeChat').src = chatUrl;
 
-        // Thêm sự kiện để bật âm thanh
+        // Sự kiện khi video được tải
         document.getElementById('videoPlayer').onload = function() {
             var videoIframe = document.getElementById('videoPlayer');
             var video = videoIframe.contentWindow.document.querySelector('video');
