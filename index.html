@@ -3,83 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Input</title>
+    <title>YouTube Video Background with Chat</title>
     <style>
         body {
-            font-family: 'Poppins', sans-serif; /* Font hiện đại */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
             margin: 0;
-            background: linear-gradient(135deg, #e09, #d0e); /* Nền gradient đẹp */
-            color: #333;
+            display: flex;
+            height: 100vh;
+            background-color: black;
+            font-family: Arial, sans-serif;
+            overflow: hidden; /* Ẩn cuộn trang */
         }
-        .container {
-            text-align: center;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3); /* Đổ bóng nhẹ cho container */
-            background: rgba(255, 255, 255, 0.9); /* Nền trắng trong suốt */
-            animation: fadeIn 1s ease; /* Hiệu ứng fade-in */
+
+        /* Video container chiếm toàn bộ bên trái */
+        .video-container {
+            width: 70%; /* Video chiếm 70% */
+            height: 100%;
+            position: relative;
+            overflow: hidden; /* Ẩn phần video ra ngoài khung */
         }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        h1 {
-            margin-bottom: 20px;
-            font-size: 2.5rem; /* Kích thước tiêu đề lớn */
-            color: #d84; /* Màu tiêu đề nổi bật */
-        }
-        input[type="text"] {
-            width: 300px;
-            padding: 15px;
-            margin-bottom: 20px;
-            border: 2px solid #d84; /* Đường viền đỏ */
-            border-radius: 8px; /* Viền cong cho ô nhập */
-            transition: border-color 0.3s, transform 0.2s; /* Hiệu ứng chuyển đổi cho ô nhập */
-        }
-        input[type="text"]:focus {
-            border-color: #ff4081; /* Đổi màu khi tập trung vào ô nhập */
-            outline: none; /* Xóa outline mặc định */
-            transform: scale(1.05); /* Phóng to một chút khi tập trung */
-        }
-        button {
-            padding: 12px 25px;
-            background-color: #ff4081; /* Màu nền cho button */
-            color: white; /* Màu chữ button */
+
+        /* Video sẽ được phát như nền */
+        iframe {
+            width: 100%;
+            height: 100%;
             border: none;
-            border-radius: 8px; /* Viền cong cho button */
-            cursor: pointer;
-            transition: background-color 0.3s, transform 0.2s; /* Hiệu ứng chuyển màu */
-            font-size: 1rem; /* Kích thước chữ trong button */
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: -1; /* Đặt video dưới các phần tử khác */
         }
-        button:hover {
-            background-color: #d84; /* Màu nền khi hover */
-            transform: scale(1.05); /* Phóng to khi hover */
+
+        /* Khung chat bên phải */
+        .chat-container {
+            width: 30%; /* Khung chat chiếm 30% */
+            height: 100%;
+            border-left: 2px solid #ccc; /* Đường viền phân cách */
+            background-color: rgba(255, 255, 255, 0.1); /* Nền mờ cho khung chat */
+            position: relative;
+            z-index: 2; /* Đảm bảo khung chat nằm trên video */
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Enter YouTube Video Link</h1>
-        <input type="text" id="videoLink" placeholder="Enter YouTube link" required>
-        <br>
-        <button onclick="submitLink()">Submit</button>
+
+    <!-- Phần video -->
+    <div class="video-container">
+        <iframe id="videoPlayer" 
+                src="" 
+                allowfullscreen allow="autoplay; encrypted-media" 
+                autoplay>
+        </iframe>
+    </div>
+
+    <!-- Phần chat -->
+    <div class="chat-container">
+        <iframe id="youtubeChat" 
+                src="" 
+                frameborder="0" 
+                style="width: 100%; height: 100%;">
+        </iframe>
     </div>
 
     <script>
-        function submitLink() {
-            var link = document.getElementById('videoLink').value;
-            if (link) {
-                // Extract the video ID from the YouTube URL
-                var videoId = link.split('v=')[1].split('&')[0];
-                window.location.href = 'video.html?videoId=' + videoId;
-            } else {
-                alert("Please enter a valid YouTube link");
+        // Lấy video ID từ URL nếu có
+        var urlParams = new URLSearchParams(window.location.search);
+        var videoId = urlParams.get('videoId') || 'BFE9aPBg6Gw'; // Thay đổi ID video ở đây
+
+        // Đặt URL cho video
+        var playerUrl = 'https://www.youtube.com/embed/' + videoId + '?autoplay=1&controls=0&loop=1&playlist=' + videoId + '&mute=0';
+        document.getElementById('videoPlayer').src = playerUrl;
+
+        // Đặt URL cho chat YouTube
+        var chatUrl = 'https://www.youtube.com/live_chat?v=' + videoId + '&embed_domain=' + window.location.hostname;
+        document.getElementById('youtubeChat').src = chatUrl;
+
+        // Sự kiện khi video được tải
+        document.getElementById('videoPlayer').onload = function() {
+            var videoIframe = document.getElementById('videoPlayer');
+            var video = videoIframe.contentWindow.document.querySelector('video');
+            if (video) {
+                video.muted = false; // Bật âm thanh
+                video.play(); // Phát video
             }
-        }
+        };
     </script>
 </body>
 </html>
