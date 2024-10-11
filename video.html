@@ -22,41 +22,10 @@
         .video-frame {
             width: 90%;
             height: 90%;
-            border-radius: 20px; /* Viền cong */
+            border-radius: 20px;
             overflow: hidden;
-            position: relative;
+            cursor: pointer;
         }
-        /* Lớp phủ để che đi watermark và các nút không mong muốn */
-        .overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none; /* Không cản trở người dùng tương tác với video */
-        }
-
-        /* Phủ che watermark */
-        .overlay-watermark {
-            position: absolute;
-            bottom: 40px; /* Vị trí của watermark (gần dưới cùng video) */
-            right: 0;
-            width: 120px;
-            height: 40px;
-            background-color: transparent;
-        }
-
-        /* Phủ che tiêu đề video và các nút trên cùng */
-        .overlay-title {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 60px; /* Chiều cao đủ để che tiêu đề và nút tìm kiếm */
-            background-color: transparent;
-        }
-
-        /* Khung chat */
         .chat-container {
             width: 30%;
             height: 100%;
@@ -67,10 +36,6 @@
             height: 100%;
             border: none;
         }
-        /* Ẩn các controls mặc định */
-        .controls {
-            display: none;
-        }
     </style>
 </head>
 <body>
@@ -78,12 +43,7 @@
     <!-- Video YouTube -->
     <div class="video-container">
         <div class="video-frame" id="videoFrame">
-            <iframe id="youtubeVideo" frameborder="0" allow="autoplay"></iframe>
-            <!-- Các lớp phủ để che watermark và tiêu đề -->
-            <div class="overlay">
-                <div class="overlay-watermark"></div>
-                <div class="overlay-title"></div>
-            </div>
+            <div id="player"></div>
         </div>
     </div>
 
@@ -100,10 +60,6 @@
         var videoId = urlParams.get('videoId');
 
         if (videoId) {
-            // Thêm video ID vào iframe video
-            var videoUrl = 'https://www.youtube.com/embed/' + videoId + '?enablejsapi=1&autoplay=1&controls=0'; // autoplay=1 để tự động phát, controls=0 để ẩn nút điều khiển
-            document.getElementById('youtubeVideo').src = videoUrl;
-
             // Thêm chat live vào iframe chat
             var chatUrl = 'https://www.youtube.com/live_chat?v=' + videoId + '&embed_domain=' + window.location.hostname;
             document.getElementById('youtubeChat').src = chatUrl;
@@ -113,7 +69,18 @@
 
         // YouTube Iframe API để điều khiển video
         function onYouTubeIframeAPIReady() {
-            player = new YT.Player('youtubeVideo', {
+            player = new YT.Player('player', {
+                height: '100%',
+                width: '100%',
+                videoId: videoId,
+                playerVars: {
+                    'autoplay': 1,
+                    'controls': 0,   // Ẩn các nút điều khiển
+                    'modestbranding': 1, // Ẩn logo YouTube ở góc
+                    'rel': 0,        // Không hiển thị video liên quan
+                    'showinfo': 0,   // Ẩn tiêu đề video
+                    'iv_load_policy': 3, // Ẩn chú thích
+                },
                 events: {
                     'onReady': onPlayerReady
                 }
