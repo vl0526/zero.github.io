@@ -5,213 +5,66 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Custom YouTube Player</title>
     <style>
-        /* Cấu hình cơ bản */
         body {
             margin: 0;
             display: flex;
             height: 100vh;
-            background-color: black; /* Nền đen để tránh hở */
+            background-color: black;
             font-family: Arial, sans-serif;
         }
 
-        /* Video container chiếm toàn bộ bên trái */
+        /* Khung chat bên trái */
+        .chat-container {
+            width: 30%;
+            height: 100%;
+            border-radius: 20px; /* Bo tròn viền khung chat */
+            overflow: hidden;
+            background-color: rgba(255, 255, 255, 0.1); /* Nền mờ cho khung chat */
+            position: relative;
+        }
+
+        /* Video container chiếm toàn bộ bên phải */
         .video-container {
             width: 70%;
             height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
             position: relative;
-        }
-
-        /* Khung chứa video và thanh tua */
-        .video-frame {
-            width: 100%;
-            height: 100%;
             border-radius: 20px; /* Bo tròn viền video */
             overflow: hidden;
-            position: relative;
         }
 
-        /* Ẩn hoàn toàn các phần điều khiển của YouTube (logo, kênh, tiêu đề, ...) */
+        /* Video sẽ được phát như nền */
         iframe {
             width: 100%;
             height: 100%;
             border: none;
             border-radius: 20px;
         }
-
-        /* Thanh tua video tùy chỉnh */
-        .progress-bar-container {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            width: calc(100% - 40px); /* Để cách đều hai bên */
-            height: 10px;
-            background-color: rgba(255, 255, 255, 0.2);
-            cursor: pointer;
-            border-radius: 5px;
-        }
-
-        /* Phần màu đỏ chạy khi video phát */
-        .progress-bar {
-            width: 0;
-            height: 100%;
-            background-color: red;
-            border-radius: 5px;
-            position: relative;
-        }
-
-        /* Nút tròn giống YouTube trên thanh tua */
-        .progress-circle {
-            width: 15px;
-            height: 15px;
-            background-color: white;
-            border-radius: 50%;
-            position: absolute;
-            top: -3px; /* Đặt nút tròn vào giữa thanh */
-            right: 0;
-            transform: translateX(50%);
-            cursor: pointer;
-        }
-
-        /* Khung chat bên phải */
-        .chat-container {
-            width: 30%;
-            height: 100%;
-            border-left: 1px solid #ccc;
-            display: flex;
-        }
     </style>
 </head>
 <body>
-
-    <!-- Phần video -->
-    <div class="video-container">
-        <div class="video-frame" id="videoFrame">
-            <div id="player"></div>
-            <div class="progress-bar-container" id="progressBarContainer">
-                <div class="progress-bar" id="progressBar">
-                    <div class="progress-circle" id="progressCircle"></div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Phần chat -->
     <div class="chat-container">
         <iframe id="youtubeChat" frameborder="0"></iframe>
     </div>
 
-    <script>
-        var player;
+    <!-- Phần video -->
+    <div class="video-container">
+        <iframe id="videoPlayer" src="https://www.youtube.com/embed/BFE9aPBg6Gw?autoplay=1&controls=0&loop=1&playlist=BFE9aPBg6Gw" allowfullscreen></iframe>
+    </div>
 
+    <script>
         // Lấy video ID từ URL
         var urlParams = new URLSearchParams(window.location.search);
-        var videoId = urlParams.get('videoId');
+        var videoId = urlParams.get('videoId') || 'BFE9aPBg6Gw'; // Thay đổi ID video ở đây
 
-        if (videoId) {
-            var chatUrl = 'https://www.youtube.com/live_chat?v=' + videoId + '&embed_domain=' + window.location.hostname;
-            document.getElementById('youtubeChat').src = chatUrl;
-        } else {
-            alert("Không tìm thấy ID video");
-        }
+        // Đặt URL cho chat YouTube
+        var chatUrl = 'https://www.youtube.com/live_chat?v=' + videoId + '&embed_domain=' + window.location.hostname;
+        document.getElementById('youtubeChat').src = chatUrl;
 
-        // YouTube API để điều khiển video
-        function onYouTubeIframeAPIReady() {
-            player = new YT.Player('player', {
-                height: '100%',
-                width: '100%',
-                videoId: videoId,
-                playerVars: {
-                    'autoplay': 1,
-                    'controls': 0,    // Ẩn hoàn toàn các nút điều khiển
-                    'modestbranding': 1, // Giảm kích thước logo YouTube
-                    'rel': 0,
-                    'iv_load_policy': 3, // Ẩn các chú thích
-                    'fs': 0, // Ẩn nút fullscreen
-                    'disablekb': 1, // Vô hiệu hóa bàn phím
-                    'showinfo': 0, // Ẩn thông tin video
-                    'branding': 0 // Ẩn logo YouTube
-                },
-                events: {
-                    'onReady': onPlayerReady,
-                    'onStateChange': onPlayerStateChange
-                }
-            });
-        }
-
-        function onPlayerReady(event) {
-            var videoFrame = document.getElementById('videoFrame');
-            videoFrame.addEventListener('click', function() {
-                var playerState = player.getPlayerState();
-                if (playerState === YT.PlayerState.PLAYING) {
-                    player.pauseVideo();
-                } else {
-                    player.playVideo();
-                }
-            });
-            setInterval(updateProgressBar, 500); // Cập nhật thanh tua mỗi 0.5 giây
-        }
-
-        function onPlayerStateChange(event) {
-            if (event.data === YT.PlayerState.PLAYING) {
-                updateProgressBar();
-            }
-        }
-
-        // Cập nhật thanh tua và nút tròn
-        function updateProgressBar() {
-            var progressBar = document.getElementById('progressBar');
-            var progressCircle = document.getElementById('progressCircle');
-            var duration = player.getDuration();
-            var currentTime = player.getCurrentTime();
-            var percentage = (currentTime / duration) * 100;
-
-            // Cập nhật chiều rộng của thanh màu đỏ
-            progressBar.style.width = percentage + '%';
-
-            // Di chuyển nút tròn theo thanh tua
-            progressCircle.style.transform = `translateX(${percentage}%)`;
-        }
-
-        // Di chuyển thanh tua khi người dùng kéo chấm tròn
-        var isDragging = false;
-
-        var progressBarContainer = document.getElementById('progressBarContainer');
-        var progressCircle = document.getElementById('progressCircle');
-
-        progressCircle.addEventListener('mousedown', function() {
-            isDragging = true;
-        });
-
-        document.addEventListener('mouseup', function() {
-            if (isDragging) {
-                isDragging = false;
-                var containerWidth = progressBarContainer.offsetWidth;
-                var currentWidth = parseFloat(progressBar.style.width);
-                var newTime = (currentWidth / 100) * player.getDuration();
-                player.seekTo(newTime, true);
-                player.playVideo(); // Tự động phát lại video khi thả chuột
-            }
-        });
-
-        document.addEventListener('mousemove', function(e) {
-            if (isDragging) {
-                var containerWidth = progressBarContainer.offsetWidth;
-                var clickPosition = e.clientX - progressBarContainer.getBoundingClientRect().left;
-                var percentage = Math.min(Math.max(clickPosition / containerWidth, 0), 1) * 100;
-
-                progressBar.style.width = percentage + '%';
-                progressCircle.style.transform = `translateX(${percentage}%)`;
-            }
-        });
-
-        // Thêm YouTube API script
-        var tag = document.createElement('script');
-        tag.src = "https://www.youtube.com/iframe_api";
-        var firstScriptTag = document.getElementsByTagName('script')[0];
-        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+        // Đặt URL cho video
+        var playerUrl = 'https://www.youtube.com/embed/' + videoId + '?autoplay=1&controls=0&loop=1&playlist=' + videoId;
+        document.getElementById('videoPlayer').src = playerUrl;
     </script>
 </body>
 </html>
