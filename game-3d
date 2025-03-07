@@ -1,4 +1,0 @@
-game-3d/
-│── index.html      (Giao diện chính)
-│── style.css       (CSS cho game)
-│── game.js         (Code xử lý game)
