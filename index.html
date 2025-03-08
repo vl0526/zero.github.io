@@ -5,10 +5,35 @@
   <title>3D Racing Game Update 2.5</title>
   <style>
     body { margin: 0; overflow: hidden; background: #000; }
-    #hud { position: absolute; top: 10px; left: 10px; color: #fff; font-family: sans-serif; z-index: 10; font-size: 18px; }
-    #control-buttons { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; z-index: 10; }
-    #control-buttons button { padding: 10px 20px; font-size: 16px; border: none; border-radius: 5px; background: rgba(255,255,255,0.8); cursor: pointer; }
-    #control-buttons button:active { background: rgba(200,200,200,0.8); }
+    #hud {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: #fff;
+      font-family: sans-serif;
+      z-index: 10;
+      font-size: 18px;
+    }
+    #control-buttons {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      z-index: 10;
+    }
+    #control-buttons button {
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
+      background: rgba(255,255,255,0.8);
+      cursor: pointer;
+    }
+    #control-buttons button:active {
+      background: rgba(200,200,200,0.8);
+    }
   </style>
 </head>
 <body>
@@ -19,29 +44,34 @@
     <button id="btn-down">↓</button>
     <button id="btn-right">→</button>
   </div>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
-  <script src="https://threejs.org/examples/js/loaders/GLTFLoader.js"></script>
-  <script>
+  <!-- Sử dụng module imports cho Three.js, GLTFLoader và cannon‑es -->
+  <script type="module">
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
+    import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/loaders/GLTFLoader.js';
+    import * as CANNON from 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js';
+
     let scene, camera, renderer, hud;
     let world, vehicle, chassisBody, chassisMesh, carModel;
     let controls = { forward: false, backward: false, left: false, right: false, brake: false };
     let lastTime;
-    
+
     init();
     animate();
-    
+
     function init() {
       hud = document.getElementById('hud');
+
       scene = new THREE.Scene();
       scene.fog = new THREE.FogExp2(0x000000, 0.002);
+
       camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
       camera.position.set(0, 5, -10);
+
       renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.shadowMap.enabled = true;
       document.body.appendChild(renderer.domElement);
-      
+
       const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
       scene.add(ambientLight);
       const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
@@ -50,20 +80,20 @@
       directionalLight.shadow.mapSize.width = 1024;
       directionalLight.shadow.mapSize.height = 1024;
       scene.add(directionalLight);
-      
+
       world = new CANNON.World();
       world.gravity.set(0, -9.82, 0);
       world.broadphase = new CANNON.NaiveBroadphase();
       world.solver.iterations = 10;
-      
-      const groundMaterial = new CANNON.Material("groundMaterial");
+
       const groundShape = new CANNON.Plane();
-      const groundBody = new CANNON.Body({ mass: 0, material: groundMaterial });
+      const groundBody = new CANNON.Body({ mass: 0 });
       groundBody.addShape(groundShape);
       groundBody.quaternion.setFromEuler(-Math.PI/2, 0, 0);
       world.addBody(groundBody);
-      
-      const groundTexture = new THREE.TextureLoader().load("https://threejsfundamentals.org/threejs/resources/images/grasslight-big.jpg");
+
+      const textureLoader = new THREE.TextureLoader();
+      const groundTexture = textureLoader.load("https://threejsfundamentals.org/threejs/resources/images/grasslight-big.jpg");
       groundTexture.wrapS = groundTexture.wrapT = THREE.RepeatWrapping;
       groundTexture.repeat.set(50, 50);
       const groundGeo = new THREE.PlaneGeometry(500, 500);
@@ -72,17 +102,17 @@
       groundMesh.rotation.x = -Math.PI/2;
       groundMesh.receiveShadow = true;
       scene.add(groundMesh);
-      
-      const chassisShape = new CANNON.Box(new CANNON.Vec3(1, 0.5, 2));
+
       chassisBody = new CANNON.Body({ mass: 150 });
+      const chassisShape = new CANNON.Box(new CANNON.Vec3(1, 0.5, 2));
       chassisBody.addShape(chassisShape);
       chassisBody.position.set(0, 2, 0);
       world.addBody(chassisBody);
-      
+
       chassisMesh = new THREE.Mesh(new THREE.BoxGeometry(2, 1, 4), new THREE.MeshPhongMaterial({ color: 0x000000, visible: false }));
       chassisMesh.castShadow = true;
       scene.add(chassisMesh);
-      
+
       vehicle = new CANNON.RaycastVehicle({ chassisBody: chassisBody });
       const wheelOptions = {
         radius: 0.4,
@@ -112,35 +142,40 @@
         vehicle.addWheel(wheelOptions);
       }
       vehicle.addToWorld(world);
-      
+
       window.addEventListener('resize', onWindowResize);
       window.addEventListener('keydown', onKeyDown);
       window.addEventListener('keyup', onKeyUp);
       setupControlButtons();
       loadCarModel();
     }
-    
+
     function loadCarModel() {
-      const loader = new THREE.GLTFLoader();
+      const loader = new GLTFLoader();
       loader.load(
         'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf',
-        function(gltf) {
+        (gltf) => {
           carModel = gltf.scene;
           carModel.scale.set(0.5, 0.5, 0.5);
-          carModel.traverse(child => { if(child.isMesh){ child.castShadow = true; child.receiveShadow = true; } });
+          carModel.traverse(child => {
+            if(child.isMesh) {
+              child.castShadow = true;
+              child.receiveShadow = true;
+            }
+          });
           chassisMesh.add(carModel);
         },
         undefined,
-        function(error) { console.error(error); }
+        (error) => { console.error('Error loading car model:', error); }
       );
     }
-    
+
     function onWindowResize() {
       camera.aspect = window.innerWidth/window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     }
-    
+
     function onKeyDown(e) {
       switch(e.code) {
         case 'ArrowUp': controls.forward = true; break;
@@ -150,7 +185,7 @@
         case 'Space': controls.brake = true; break;
       }
     }
-    
+
     function onKeyUp(e) {
       switch(e.code) {
         case 'ArrowUp': controls.forward = false; break;
@@ -160,7 +195,7 @@
         case 'Space': controls.brake = false; break;
       }
     }
-    
+
     function setupControlButtons() {
       const btnUp = document.getElementById('btn-up'),
             btnDown = document.getElementById('btn-down'),
@@ -187,19 +222,21 @@
       btnRight.addEventListener('touchstart', () => controls.right = true);
       btnRight.addEventListener('touchend', () => controls.right = false);
     }
-    
+
     function animate(time) {
       requestAnimationFrame(animate);
       if(lastTime !== undefined) {
-        let dt = (time - lastTime) / 1000;
+        const dt = (time - lastTime) / 1000;
         const maxEngineForce = 300;
         let engineForce = 0;
         if(controls.forward) engineForce = -maxEngineForce;
         if(controls.backward) engineForce = maxEngineForce;
-        let brakeForce = controls.brake ? 100 : 0;
+        const brakeForce = controls.brake ? 100 : 0;
         vehicle.applyEngineForce(engineForce, 0);
         vehicle.applyEngineForce(engineForce, 1);
-        for(let i = 0; i < 4; i++) { vehicle.setBrake(brakeForce, i); }
+        for(let i = 0; i < 4; i++) {
+          vehicle.setBrake(brakeForce, i);
+        }
         let steerVal = 0;
         const maxSteerVal = 0.5;
         if(controls.left) steerVal = maxSteerVal;
