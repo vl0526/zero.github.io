@@ -1,114 +1,171 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Game Rắn Săn Mồi</title>
-    <style>
-        canvas {
-            border: 1px solid black;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Web Bắn Pháo Hoa</title>
+  <style>
+    body {
+      margin: 0;
+      background: black;
+      overflow: hidden;
+      position: relative;
+      font-family: sans-serif;
+    }
+    canvas { display: block; }
+    #textDisplay {
+      position: absolute;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 48px;
+      font-weight: bold;
+      color: white;
+      text-shadow: 2px 2px 10px red;
+      display: none;
+      z-index: 10;
+    }
+    #fireButton {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 20px;
+      font-size: 24px;
+      background: #ff4081;
+      border: none;
+      border-radius: 5px;
+      color: white;
+      cursor: pointer;
+      z-index: 10;
+    }
+  </style>
 </head>
 <body>
-    <canvas id="gameCanvas" width="400" height="400"></canvas>
-    <script>
-        // Lấy canvas và ngữ cảnh 2D
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        
-        // Kích thước ô lưới
-        const gridSize = 20;
-        
-        // Khởi tạo rắn (ban đầu chỉ có 1 phần đầu)
-        let snake = [{x: 200, y: 200}];
-        
-        // Hướng di chuyển ban đầu (đứng yên)
-        let direction = {x: 0, y: 0};
-        
-        // Vị trí thức ăn
-        let food = {x: 0, y: 0};
-        
-        // Điểm số
-        let score = 0;
-
-        // Tạo vị trí ngẫu nhiên cho thức ăn
-        function getRandomPosition() {
-            return {
-                x: Math.floor(Math.random() * (canvas.width / gridSize)) * gridSize,
-                y: Math.floor(Math.random() * (canvas.height / gridSize)) * gridSize
-            };
+  <canvas id="canvas"></canvas>
+  <div id="textDisplay">địt mẹ mày</div>
+  <button id="fireButton">Bắn Pháo Hoa</button>
+  <audio id="explosionSound" src="https://www.soundjay.com/explosion/sounds/firework-explosion-01.mp3"></audio>
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    
+    const fireButton = document.getElementById('fireButton');
+    const textDisplay = document.getElementById('textDisplay');
+    const explosionSound = document.getElementById('explosionSound');
+    
+    let fireworks = [];
+    let particles = [];
+    let fireworkCount = 0;
+    
+    // Firework lớp: đại diện cho quả pháo hoa bắn lên
+    class Firework {
+      constructor(x, y, targetY) {
+        this.x = x;
+        this.y = y;
+        this.targetY = targetY;
+        this.speed = 5;
+        this.exploded = false;
+      }
+      update() {
+        if(this.y > this.targetY) {
+          this.y -= this.speed;
+        } else {
+          this.explode();
+          this.exploded = true;
         }
-
-        // Vẽ game lên canvas
-        function draw() {
-            // Xóa canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Vẽ rắn (màu xanh)
-            ctx.fillStyle = 'green';
-            snake.forEach(part => ctx.fillRect(part.x, part.y, gridSize, gridSize));
-            
-            // Vẽ thức ăn (màu đỏ)
-            ctx.fillStyle = 'red';
-            ctx.fillRect(food.x, food.y, gridSize, gridSize);
+      }
+      draw() {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+        ctx.fillStyle = 'white';
+        ctx.fill();
+        ctx.restore();
+      }
+      explode() {
+        explosionSound.currentTime = 0;
+        explosionSound.play();
+        // Tạo 50 hạt vụ nổ
+        for(let i = 0; i < 50; i++) {
+          particles.push(new Particle(this.x, this.y));
         }
-
-        // Cập nhật trạng thái game
-        function update() {
-            // Tính toán vị trí mới của đầu rắn
-            const head = {x: snake[0].x + direction.x, y: snake[0].y + direction.y};
-            
-            // Kiểm tra va chạm với tường hoặc chính mình
-            if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height || 
-                snake.some(part => part.x === head.x && part.y === head.y)) {
-                alert('Game Over! Điểm: ' + score);
-                snake = [{x: 200, y: 200}]; // Reset rắn
-                direction = {x: 0, y: 0};   // Reset hướng
-                score = 0;                  // Reset điểm
-            } else {
-                // Thêm đầu mới vào rắn
-                snake.unshift(head);
-                
-                // Kiểm tra ăn thức ăn
-                if (head.x === food.x && head.y === food.y) {
-                    score++;                // Tăng điểm
-                    food = getRandomPosition(); // Tạo thức ăn mới
-                } else {
-                    snake.pop();            // Xóa phần đuôi nếu không ăn
-                }
-            }
+      }
+    }
+    
+    // Particle lớp: đại diện cho các hạt vụ nổ
+    class Particle {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.speed = Math.random() * 5 + 2;
+        this.angle = Math.random() * Math.PI * 2;
+        this.vx = Math.cos(this.angle) * this.speed;
+        this.vy = Math.sin(this.angle) * this.speed;
+        this.alpha = 1;
+        this.decay = Math.random() * 0.02 + 0.015;
+        this.color = 'hsl(' + Math.floor(Math.random() * 360) + ',100%,50%)';
+      }
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.vy += 0.05; // trọng lực
+        this.alpha -= this.decay;
+      }
+      draw() {
+        ctx.save();
+        ctx.globalAlpha = this.alpha;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+    
+    function animate() {
+      // Vẽ một lớp mờ để tạo hiệu ứng vệt sáng
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Cập nhật và vẽ các pháo hoa
+      for(let i = fireworks.length - 1; i >= 0; i--) {
+        fireworks[i].update();
+        fireworks[i].draw();
+        if(fireworks[i].exploded) {
+          fireworks.splice(i, 1);
         }
-
-        // Vòng lặp game
-        function gameLoop() {
-            update();
-            draw();
+      }
+      
+      // Cập nhật và vẽ các hạt vụ nổ
+      for(let i = particles.length - 1; i >= 0; i--) {
+        particles[i].update();
+        particles[i].draw();
+        if(particles[i].alpha <= 0) {
+          particles.splice(i, 1);
         }
-
-        // Xử lý phím điều khiển
-        document.addEventListener('keydown', e => {
-            switch (e.key) {
-                case 'ArrowUp': 
-                    if (direction.y === 0) direction = {x: 0, y: -gridSize}; 
-                    break;
-                case 'ArrowDown': 
-                    if (direction.y === 0) direction = {x: 0, y: gridSize}; 
-                    break;
-                case 'ArrowLeft': 
-                    if (direction.x === 0) direction = {x: -gridSize, y: 0}; 
-                    break;
-                case 'ArrowRight': 
-                    if (direction.x === 0) direction = {x: gridSize, y: 0}; 
-                    break;
-            }
-        });
-
-        // Đặt vị trí ban đầu cho thức ăn
-        food = getRandomPosition();
-        
-        // Chạy game mỗi 100ms
-        setInterval(gameLoop, 100);
-    </script>
+      }
+      
+      requestAnimationFrame(animate);
+    }
+    
+    fireButton.addEventListener('click', () => {
+      // Bắn pháo hoa từ giữa dưới lên tới vị trí ngẫu nhiên gần đầu màn hình
+      let startX = canvas.width / 2;
+      let startY = canvas.height;
+      let targetY = Math.random() * canvas.height / 2;
+      fireworks.push(new Firework(startX, startY, targetY));
+      fireworkCount++;
+      // Khi bắn xong 5 quả pháo hoa, hiển thị chữ
+      if(fireworkCount === 5) {
+        setTimeout(() => {
+          textDisplay.style.display = 'block';
+        }, 1000);
+      }
+    });
+    
+    animate();
+  </script>
 </body>
 </html>
