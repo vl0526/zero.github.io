@@ -1,78 +1,66 @@
-// Khởi tạo scene, camera và renderer
+// Create the scene
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0, 5, 10); // Đặt camera phía sau xe
-const renderer = new THREE.WebGLRenderer();
+
+// Set up the camera
+const camera = new THREE.PerspectiveCamera(
+    75, // Field of view
+    window.innerWidth / window.innerHeight, // Aspect ratio
+    0.1, // Near clipping plane
+    1000 // Far clipping plane
+);
+camera.position.z = 5; // Move camera back to view the model
+
+// Set up the renderer
+const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-// Thêm ánh sáng
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); // Ánh sáng môi trường
-scene.add(ambientLight);
-const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5); // Ánh sáng định hướng
-directionalLight.position.set(0, 10, 0);
-scene.add(directionalLight);
+// Add a basic light to illuminate the model
+const light = new THREE.DirectionalLight(0xffffff, 1);
+light.position.set(5, 5, 5).normalize();
+scene.add(light);
 
-// Tải model xe mô tô
+// Initialize the GLTFLoader
 const loader = new THREE.GLTFLoader();
-let bike;
-loader.load('path/to/bike.glb', (gltf) => {
-    bike = gltf.scene;
-    bike.position.set(0, 0.5, 0); // Đặt xe trên mặt đất
-    scene.add(bike);
-});
 
-// Tạo mặt đất
-const groundGeometry = new THREE.PlaneGeometry(100, 100);
-const groundMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-ground.rotation.x = -Math.PI / 2; // Xoay mặt đất nằm ngang
-scene.add(ground);
+// Load a GLTF model (replace the URL with your model's path)
+loader.load(
+    'https://threejs.org/examples/models/gltf/DamagedHelmet/glTF/DamagedHelmet.gltf', // Example model
+    function (gltf) {
+        // On successful load, add the model to the scene
+        const model = gltf.scene;
+        scene.add(model);
 
-// Thêm cây cối
-const treeGeometry = new THREE.CylinderGeometry(0.5, 0.5, 5, 32);
-const treeMaterial = new THREE.MeshBasicMaterial({ color: 0x8B4513 });
-const tree = new THREE.Mesh(treeGeometry, treeMaterial);
-tree.position.set(5, 2.5, -5); // Đặt cây trong cảnh
-scene.add(tree);
-
-// Biến điều khiển xe
-let speed = 0;
-let steering = 0;
-const maxSpeed = 0.5; // Tốc độ tối đa
-const acceleration = 0.01; // Gia tốc
-const steeringSpeed = 0.05; // Tốc độ rẽ
-
-// Điều khiển bằng bàn phím
-document.addEventListener('keydown', (event) => {
-    switch (event.key) {
-        case 'ArrowUp': speed = Math.min(speed + acceleration, maxSpeed); break;
-        case 'ArrowDown': speed = Math.max(speed - acceleration, -maxSpeed); break;
-        case 'ArrowLeft': steering = Math.min(steering + steeringSpeed, 1); break;
-        case 'ArrowRight': steering = Math.max(steering - steeringSpeed, -1); break;
+        // Optional: Center and scale the model if needed
+        model.position.set(0, 0, 0);
+        model.scale.set(1, 1, 1);
+    },
+    function (xhr) {
+        // Progress callback (optional)
+        console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+    },
+    function (error) {
+        // Error callback
+        console.error('An error occurred while loading the model:', error);
     }
-});
+);
 
-document.addEventListener('keyup', (event) => {
-    switch (event.key) {
-        case 'ArrowUp':
-        case 'ArrowDown': speed = 0; break;
-        case 'ArrowLeft':
-        case 'ArrowRight': steering = 0; break;
-    }
-});
-
-// Hàm animate
+// Animation loop to render the scene
 function animate() {
-    requestAnimationFrame(animate); // Render mượt mà
-    if (bike) {
-        const direction = new THREE.Vector3();
-        bike.getWorldDirection(direction); // Lấy hướng xe
-        bike.position.addScaledVector(direction, speed); // Di chuyển xe
-        bike.rotation.y += steering * speed; // Xoay xe khi rẽ
-        camera.position.set(bike.position.x, bike.position.y + 5, bike.position.z + 10); // Camera theo xe
-        camera.lookAt(bike.position); // Nhìn vào xe
+    requestAnimationFrame(animate);
+
+    // Optional: Rotate the model for a dynamic effect
+    if (scene.children.length > 1) { // Check if model is loaded
+        scene.children[1].rotation.y += 0.01;
     }
+
     renderer.render(scene, camera);
 }
 animate();
+
+// Handle window resize
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
