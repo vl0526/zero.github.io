@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>3D Racing Game Update 2.5</title>
+  <title>3D Racing Game Update 2.5 - Debugged</title>
   <style>
     body { margin: 0; overflow: hidden; background: #000; }
     #hud {
@@ -44,7 +44,7 @@
     <button id="btn-down">↓</button>
     <button id="btn-right">→</button>
   </div>
-  <!-- Sử dụng module imports cho Three.js, GLTFLoader và cannon‑es -->
+  <!-- CHÚ Ý: Chạy file này qua local server (không mở trực tiếp từ file system) -->
   <script type="module">
     import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
     import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/loaders/GLTFLoader.js';
@@ -60,11 +60,10 @@
 
     function init() {
       hud = document.getElementById('hud');
-
       scene = new THREE.Scene();
       scene.fog = new THREE.FogExp2(0x000000, 0.002);
 
-      camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
       camera.position.set(0, 5, -10);
 
       renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -89,17 +88,18 @@
       const groundShape = new CANNON.Plane();
       const groundBody = new CANNON.Body({ mass: 0 });
       groundBody.addShape(groundShape);
-      groundBody.quaternion.setFromEuler(-Math.PI/2, 0, 0);
+      groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
       world.addBody(groundBody);
 
       const textureLoader = new THREE.TextureLoader();
-      const groundTexture = textureLoader.load("https://threejsfundamentals.org/threejs/resources/images/grasslight-big.jpg");
+      // Cập nhật URL texture nền sang URL khả dụng:
+      const groundTexture = textureLoader.load("https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/grasslight-big.jpg");
       groundTexture.wrapS = groundTexture.wrapT = THREE.RepeatWrapping;
       groundTexture.repeat.set(50, 50);
       const groundGeo = new THREE.PlaneGeometry(500, 500);
       const groundMat = new THREE.MeshPhongMaterial({ map: groundTexture });
       const groundMesh = new THREE.Mesh(groundGeo, groundMat);
-      groundMesh.rotation.x = -Math.PI/2;
+      groundMesh.rotation.x = -Math.PI / 2;
       groundMesh.receiveShadow = true;
       scene.add(groundMesh);
 
@@ -171,7 +171,7 @@
     }
 
     function onWindowResize() {
-      camera.aspect = window.innerWidth/window.innerHeight;
+      camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     }
