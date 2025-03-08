@@ -1,20 +1,114 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Three.js GLTFLoader Example</title>
+    <title>Game Rắn Săn Mồi</title>
     <style>
-        body { margin: 0; }
-        canvas { display: block; }
+        canvas {
+            border: 1px solid black;
+        }
     </style>
 </head>
 <body>
-    <!-- Load Three.js core -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <!-- Load GLTFLoader extension -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-    <!-- Your game.js script -->
-    <script src="game.js"></script>
+    <canvas id="gameCanvas" width="400" height="400"></canvas>
+    <script>
+        // Lấy canvas và ngữ cảnh 2D
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Kích thước ô lưới
+        const gridSize = 20;
+        
+        // Khởi tạo rắn (ban đầu chỉ có 1 phần đầu)
+        let snake = [{x: 200, y: 200}];
+        
+        // Hướng di chuyển ban đầu (đứng yên)
+        let direction = {x: 0, y: 0};
+        
+        // Vị trí thức ăn
+        let food = {x: 0, y: 0};
+        
+        // Điểm số
+        let score = 0;
+
+        // Tạo vị trí ngẫu nhiên cho thức ăn
+        function getRandomPosition() {
+            return {
+                x: Math.floor(Math.random() * (canvas.width / gridSize)) * gridSize,
+                y: Math.floor(Math.random() * (canvas.height / gridSize)) * gridSize
+            };
+        }
+
+        // Vẽ game lên canvas
+        function draw() {
+            // Xóa canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Vẽ rắn (màu xanh)
+            ctx.fillStyle = 'green';
+            snake.forEach(part => ctx.fillRect(part.x, part.y, gridSize, gridSize));
+            
+            // Vẽ thức ăn (màu đỏ)
+            ctx.fillStyle = 'red';
+            ctx.fillRect(food.x, food.y, gridSize, gridSize);
+        }
+
+        // Cập nhật trạng thái game
+        function update() {
+            // Tính toán vị trí mới của đầu rắn
+            const head = {x: snake[0].x + direction.x, y: snake[0].y + direction.y};
+            
+            // Kiểm tra va chạm với tường hoặc chính mình
+            if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height || 
+                snake.some(part => part.x === head.x && part.y === head.y)) {
+                alert('Game Over! Điểm: ' + score);
+                snake = [{x: 200, y: 200}]; // Reset rắn
+                direction = {x: 0, y: 0};   // Reset hướng
+                score = 0;                  // Reset điểm
+            } else {
+                // Thêm đầu mới vào rắn
+                snake.unshift(head);
+                
+                // Kiểm tra ăn thức ăn
+                if (head.x === food.x && head.y === food.y) {
+                    score++;                // Tăng điểm
+                    food = getRandomPosition(); // Tạo thức ăn mới
+                } else {
+                    snake.pop();            // Xóa phần đuôi nếu không ăn
+                }
+            }
+        }
+
+        // Vòng lặp game
+        function gameLoop() {
+            update();
+            draw();
+        }
+
+        // Xử lý phím điều khiển
+        document.addEventListener('keydown', e => {
+            switch (e.key) {
+                case 'ArrowUp': 
+                    if (direction.y === 0) direction = {x: 0, y: -gridSize}; 
+                    break;
+                case 'ArrowDown': 
+                    if (direction.y === 0) direction = {x: 0, y: gridSize}; 
+                    break;
+                case 'ArrowLeft': 
+                    if (direction.x === 0) direction = {x: -gridSize, y: 0}; 
+                    break;
+                case 'ArrowRight': 
+                    if (direction.x === 0) direction = {x: gridSize, y: 0}; 
+                    break;
+            }
+        });
+
+        // Đặt vị trí ban đầu cho thức ăn
+        food = getRandomPosition();
+        
+        // Chạy game mỗi 100ms
+        setInterval(gameLoop, 100);
+    </script>
 </body>
 </html>
