@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>3D Racing Game Update 2.5 - Debugged</title>
+  <title>3D Racing Game with p5.js</title>
   <style>
     body { margin: 0; overflow: hidden; background: #000; }
     #hud {
@@ -44,221 +44,105 @@
     <button id="btn-down">↓</button>
     <button id="btn-right">→</button>
   </div>
-  <!-- CHÚ Ý: Chạy file này qua local server (không mở trực tiếp từ file system) -->
-  <script type="module">
-    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
-    import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/loaders/GLTFLoader.js';
-    import * as CANNON from 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js';
+  <!-- Import p5.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.js"></script>
+  <script>
+    let car;           // Vị trí, góc, tốc độ của xe
+    let keys = {};     // Các phím đang được nhấn
+    let groundTexture; // Texture nền cỏ
 
-    let scene, camera, renderer, hud;
-    let world, vehicle, chassisBody, chassisMesh, carModel;
-    let controls = { forward: false, backward: false, left: false, right: false, brake: false };
-    let lastTime;
+    // Tải texture trước khi setup
+    function preload() {
+      // Sử dụng URL của texture (đảm bảo URL hợp lệ)
+      groundTexture = loadImage("https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/grasslight-big.jpg");
+    }
 
-    init();
-    animate();
-
-    function init() {
-      hud = document.getElementById('hud');
-      scene = new THREE.Scene();
-      scene.fog = new THREE.FogExp2(0x000000, 0.002);
-
-      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-      camera.position.set(0, 5, -10);
-
-      renderer = new THREE.WebGLRenderer({ antialias: true });
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.shadowMap.enabled = true;
-      document.body.appendChild(renderer.domElement);
-
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-      scene.add(ambientLight);
-      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-      directionalLight.position.set(10, 20, 10);
-      directionalLight.castShadow = true;
-      directionalLight.shadow.mapSize.width = 1024;
-      directionalLight.shadow.mapSize.height = 1024;
-      scene.add(directionalLight);
-
-      world = new CANNON.World();
-      world.gravity.set(0, -9.82, 0);
-      world.broadphase = new CANNON.NaiveBroadphase();
-      world.solver.iterations = 10;
-
-      const groundShape = new CANNON.Plane();
-      const groundBody = new CANNON.Body({ mass: 0 });
-      groundBody.addShape(groundShape);
-      groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
-      world.addBody(groundBody);
-
-      const textureLoader = new THREE.TextureLoader();
-      // Cập nhật URL texture nền sang URL khả dụng:
-      const groundTexture = textureLoader.load("https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/grasslight-big.jpg");
-      groundTexture.wrapS = groundTexture.wrapT = THREE.RepeatWrapping;
-      groundTexture.repeat.set(50, 50);
-      const groundGeo = new THREE.PlaneGeometry(500, 500);
-      const groundMat = new THREE.MeshPhongMaterial({ map: groundTexture });
-      const groundMesh = new THREE.Mesh(groundGeo, groundMat);
-      groundMesh.rotation.x = -Math.PI / 2;
-      groundMesh.receiveShadow = true;
-      scene.add(groundMesh);
-
-      chassisBody = new CANNON.Body({ mass: 150 });
-      const chassisShape = new CANNON.Box(new CANNON.Vec3(1, 0.5, 2));
-      chassisBody.addShape(chassisShape);
-      chassisBody.position.set(0, 2, 0);
-      world.addBody(chassisBody);
-
-      chassisMesh = new THREE.Mesh(new THREE.BoxGeometry(2, 1, 4), new THREE.MeshPhongMaterial({ color: 0x000000, visible: false }));
-      chassisMesh.castShadow = true;
-      scene.add(chassisMesh);
-
-      vehicle = new CANNON.RaycastVehicle({ chassisBody: chassisBody });
-      const wheelOptions = {
-        radius: 0.4,
-        directionLocal: new CANNON.Vec3(0, -1, 0),
-        suspensionStiffness: 40,
-        suspensionRestLength: 0.3,
-        frictionSlip: 5,
-        dampingRelaxation: 2.3,
-        dampingCompression: 4.4,
-        maxSuspensionForce: 100000,
-        rollInfluence: 0.01,
-        axleLocal: new CANNON.Vec3(-1, 0, 0),
-        chassisConnectionPointLocal: new CANNON.Vec3(),
-        maxSuspensionTravel: 0.3,
-        customSlidingRotationalSpeed: -30,
-        useCustomSlidingRotationalSpeed: true
+    function setup() {
+      createCanvas(windowWidth, windowHeight, WEBGL);
+      textureMode(NORMAL);
+      angleMode(RADIANS);
+      car = {
+        pos: createVector(0, 0, 0),
+        angle: 0,
+        speed: 0
       };
-      const axleWidth = 1.0;
-      const wheelPositions = [
-        new CANNON.Vec3(-axleWidth, 0, 1.5),
-        new CANNON.Vec3(axleWidth, 0, 1.5),
-        new CANNON.Vec3(-axleWidth, 0, -1.5),
-        new CANNON.Vec3(axleWidth, 0, -1.5)
-      ];
-      for (let pos of wheelPositions) {
-        wheelOptions.chassisConnectionPointLocal.copy(pos);
-        vehicle.addWheel(wheelOptions);
+      setupButtons();
+    }
+
+    function windowResized() {
+      resizeCanvas(windowWidth, windowHeight);
+    }
+
+    function draw() {
+      background(0);
+      
+      // Thiết lập camera theo dõi xe
+      let camX = car.pos.x - 200 * sin(car.angle);
+      let camZ = car.pos.z - 200 * cos(car.angle);
+      camera(camX, 100, camZ, car.pos.x, 0, car.pos.z, 0, 1, 0);
+      
+      ambientLight(100);
+      directionalLight(255, 255, 255, 0, -1, 0);
+      
+      // Vẽ nền: mặt phẳng với texture cỏ
+      push();
+      rotateX(-HALF_PI);
+      texture(groundTexture);
+      plane(1000, 1000);
+      pop();
+      
+      // Cập nhật chuyển động xe
+      if (keys['ArrowUp']) {
+        car.speed += 0.2;
       }
-      vehicle.addToWorld(world);
-
-      window.addEventListener('resize', onWindowResize);
-      window.addEventListener('keydown', onKeyDown);
-      window.addEventListener('keyup', onKeyUp);
-      setupControlButtons();
-      loadCarModel();
-    }
-
-    function loadCarModel() {
-      const loader = new GLTFLoader();
-      loader.load(
-        'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf',
-        (gltf) => {
-          carModel = gltf.scene;
-          carModel.scale.set(0.5, 0.5, 0.5);
-          carModel.traverse(child => {
-            if(child.isMesh) {
-              child.castShadow = true;
-              child.receiveShadow = true;
-            }
-          });
-          chassisMesh.add(carModel);
-        },
-        undefined,
-        (error) => { console.error('Error loading car model:', error); }
-      );
-    }
-
-    function onWindowResize() {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    }
-
-    function onKeyDown(e) {
-      switch(e.code) {
-        case 'ArrowUp': controls.forward = true; break;
-        case 'ArrowDown': controls.backward = true; break;
-        case 'ArrowLeft': controls.left = true; break;
-        case 'ArrowRight': controls.right = true; break;
-        case 'Space': controls.brake = true; break;
+      if (keys['ArrowDown']) {
+        car.speed -= 0.2;
       }
-    }
-
-    function onKeyUp(e) {
-      switch(e.code) {
-        case 'ArrowUp': controls.forward = false; break;
-        case 'ArrowDown': controls.backward = false; break;
-        case 'ArrowLeft': controls.left = false; break;
-        case 'ArrowRight': controls.right = false; break;
-        case 'Space': controls.brake = false; break;
+      if (keys['ArrowLeft']) {
+        car.angle -= 0.03;
       }
-    }
-
-    function setupControlButtons() {
-      const btnUp = document.getElementById('btn-up'),
-            btnDown = document.getElementById('btn-down'),
-            btnLeft = document.getElementById('btn-left'),
-            btnRight = document.getElementById('btn-right');
-      
-      btnUp.addEventListener('mousedown', () => controls.forward = true);
-      btnUp.addEventListener('mouseup', () => controls.forward = false);
-      btnUp.addEventListener('touchstart', () => controls.forward = true);
-      btnUp.addEventListener('touchend', () => controls.forward = false);
-      
-      btnDown.addEventListener('mousedown', () => controls.backward = true);
-      btnDown.addEventListener('mouseup', () => controls.backward = false);
-      btnDown.addEventListener('touchstart', () => controls.backward = true);
-      btnDown.addEventListener('touchend', () => controls.backward = false);
-      
-      btnLeft.addEventListener('mousedown', () => controls.left = true);
-      btnLeft.addEventListener('mouseup', () => controls.left = false);
-      btnLeft.addEventListener('touchstart', () => controls.left = true);
-      btnLeft.addEventListener('touchend', () => controls.left = false);
-      
-      btnRight.addEventListener('mousedown', () => controls.right = true);
-      btnRight.addEventListener('mouseup', () => controls.right = false);
-      btnRight.addEventListener('touchstart', () => controls.right = true);
-      btnRight.addEventListener('touchend', () => controls.right = false);
-    }
-
-    function animate(time) {
-      requestAnimationFrame(animate);
-      if(lastTime !== undefined) {
-        const dt = (time - lastTime) / 1000;
-        const maxEngineForce = 300;
-        let engineForce = 0;
-        if(controls.forward) engineForce = -maxEngineForce;
-        if(controls.backward) engineForce = maxEngineForce;
-        const brakeForce = controls.brake ? 100 : 0;
-        vehicle.applyEngineForce(engineForce, 0);
-        vehicle.applyEngineForce(engineForce, 1);
-        for(let i = 0; i < 4; i++) {
-          vehicle.setBrake(brakeForce, i);
-        }
-        let steerVal = 0;
-        const maxSteerVal = 0.5;
-        if(controls.left) steerVal = maxSteerVal;
-        if(controls.right) steerVal = -maxSteerVal;
-        vehicle.setSteeringValue(steerVal, 0);
-        vehicle.setSteeringValue(steerVal, 1);
-        world.step(1/60, dt, 3);
+      if (keys['ArrowRight']) {
+        car.angle += 0.03;
       }
-      lastTime = time;
+      car.speed *= 0.98; // Ma sát
+      car.pos.x += car.speed * sin(car.angle);
+      car.pos.z += car.speed * cos(car.angle);
       
-      chassisMesh.position.copy(chassisBody.position);
-      chassisMesh.quaternion.copy(chassisBody.quaternion);
+      // Vẽ xe (box màu đỏ)
+      push();
+      translate(car.pos.x, 0, car.pos.z);
+      rotateY(car.angle);
+      fill(255, 0, 0);
+      box(40, 20, 80);
+      pop();
       
-      const relativeCameraOffset = new THREE.Vector3(0, 5, -12);
-      const cameraOffset = relativeCameraOffset.applyMatrix4(chassisMesh.matrixWorld);
-      camera.position.lerp(cameraOffset, 0.05);
-      camera.lookAt(chassisMesh.position);
+      // Cập nhật HUD
+      select('#hud').html("Speed: " + nf(abs(car.speed * 10), 1, 2) + " km/h");
+    }
+
+    function keyPressed() {
+      keys[key] = true;
+    }
+
+    function keyReleased() {
+      keys[key] = false;
+    }
+
+    // Thiết lập các nút điều khiển trên màn hình
+    function setupButtons() {
+      let btnUp = select('#btn-up');
+      let btnDown = select('#btn-down');
+      let btnLeft = select('#btn-left');
+      let btnRight = select('#btn-right');
       
-      const speed = chassisBody.velocity.length();
-      hud.innerHTML = "Speed: " + Math.round(speed * 3.6) + " km/h";
-      
-      renderer.render(scene, camera);
+      btnUp.mousePressed(() => { keys['ArrowUp'] = true; });
+      btnUp.mouseReleased(() => { keys['ArrowUp'] = false; });
+      btnDown.mousePressed(() => { keys['ArrowDown'] = true; });
+      btnDown.mouseReleased(() => { keys['ArrowDown'] = false; });
+      btnLeft.mousePressed(() => { keys['ArrowLeft'] = true; });
+      btnLeft.mouseReleased(() => { keys['ArrowLeft'] = false; });
+      btnRight.mousePressed(() => { keys['ArrowRight'] = true; });
+      btnRight.mouseReleased(() => { keys['ArrowRight'] = false; });
     }
   </script>
 </body>
