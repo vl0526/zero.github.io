@@ -1,117 +1,122 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trích Xuất Thumbnail</title>
-    <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
-    <style>
-        body { font-family: Arial, sans-serif; text-align: center; background: #111; color: #fff; }
-        button, input, select { padding: 10px; margin: 10px; cursor: pointer; border: none; font-size: 16px; }
-        button { background: #00aaff; color: #fff; }
-        #thumbnails img { width: 100px; margin: 5px; }
-        #bestThumbnail { max-width: 640px; display: none; margin-top: 20px; }
-        #downloadLink { display: none; color: #00ffcc; font-size: 18px; text-decoration: none; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trích Xuất Thumbnail</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; background: #111; color: #fff; }
+    button, input, select { padding: 10px; margin: 10px; cursor: pointer; border: none; font-size: 16px; }
+    button { background: #00aaff; color: #fff; }
+    #thumbnails img { width: 100px; margin: 5px; }
+    #bestThumbnail { max-width: 640px; display: none; margin-top: 20px; }
+    #downloadLink { display: none; color: #00ffcc; font-size: 18px; text-decoration: none; }
+  </style>
+  <!-- Tải TensorFlow.js -->
+  <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <!-- Tải phiên bản minified của face-api.js (không dùng CommonJS) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js/dist/face-api.min.js"></script>
 </head>
 <body>
-    <h2>Trích Xuất & Chọn Thumbnail Đẹp Nhất</h2>
-    <input type="file" id="videoInput" accept="video/*">
-    <select id="thumbnailCount">
-        <option value="5">5 Ảnh</option>
-        <option value="10">10 Ảnh</option>
-        <option value="30" selected>30 Ảnh</option>
-        <option value="50">50 Ảnh</option>
-    </select>
-    <button onclick="extractThumbnails()">Bắt Đầu</button>
-    <div id="thumbnails"></div>
-    <h3>Ảnh Đẹp Nhất:</h3>
-    <img id="bestThumbnail">
-    <a id="downloadLink" download="best_thumbnail.jpg">Tải Ảnh Đẹp Nhất</a>
+  <h2>Trích Xuất & Chọn Thumbnail Đẹp Nhất</h2>
+  <input type="file" id="videoInput" accept="video/*">
+  <select id="thumbnailCount">
+    <option value="5">5 Ảnh</option>
+    <option value="10">10 Ảnh</option>
+    <option value="30" selected>30 Ảnh</option>
+    <option value="50">50 Ảnh</option>
+  </select>
+  <button onclick="extractThumbnails()">Bắt Đầu</button>
+  <div id="thumbnails"></div>
+  <h3>Ảnh Đẹp Nhất:</h3>
+  <img id="bestThumbnail">
+  <a id="downloadLink" download="best_thumbnail.jpg">Tải Ảnh Đẹp Nhất</a>
 
-    <script>
-        async function extractThumbnails() {
-            let file = document.getElementById("videoInput").files[0];
-            if (!file) return alert("Chọn video trước!");
-            await loadFaceAPI();
+  <script>
+    async function loadFaceAPI() {
+      // Sử dụng face-api.js đã được load từ CDN
+      // Sử dụng URL model từ justadudewhohacks (đã được host công khai)
+      await faceapi.nets.tinyFaceDetector.loadFromUri("https://justadudewhohacks.github.io/face-api.js/models");
+    }
 
-            let video = document.createElement("video"), canvas = document.createElement("canvas"), ctx = canvas.getContext("2d");
-            video.src = URL.createObjectURL(file);
-            video.muted = true;
-            video.play();
-            video.addEventListener("loadedmetadata", () => {
-                let duration = Math.min(video.duration, 300), count = parseInt(document.getElementById("thumbnailCount").value);
-                let times = [], step = Math.floor(duration / count);
-                for (let t = 0; t < duration && times.length < count; t += step) times.push(t);
-                captureFrames(video, times, canvas, ctx);
-            });
+    async function extractThumbnails() {
+      const file = document.getElementById("videoInput").files[0];
+      if (!file) return alert("Chọn video trước!");
+      await loadFaceAPI();
+
+      const video = document.createElement("video");
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      video.src = URL.createObjectURL(file);
+      video.muted = true;
+      video.play();
+      video.addEventListener("loadedmetadata", () => {
+        const duration = Math.min(video.duration, 300);
+        const count = parseInt(document.getElementById("thumbnailCount").value);
+        const times = [];
+        const step = Math.floor(duration / count);
+        for (let t = 0; t < duration && times.length < count; t += step) {
+          times.push(t);
         }
+        captureFrames(video, times, canvas, ctx);
+      });
+    }
 
-        async function loadFaceAPI() {
-            if (typeof faceapi === "undefined") {
-                await new Promise(resolve => {
-                    let script = document.createElement("script");
-                    script.src = "https://cdn.jsdelivr.net/npm/face-api.js";
-                    script.onload = resolve;
-                    document.body.appendChild(script);
-                });
-            }
-            await faceapi.nets.tinyFaceDetector.loadFromUri("https://cdn.jsdelivr.net/npm/face-api.js/weights");
+    function captureFrames(video, times, canvas, ctx) {
+      const thumbs = document.getElementById("thumbnails");
+      const images = [];
+      thumbs.innerHTML = "";
+      canvas.width = 1280;
+      canvas.height = 720;
+      let index = 0;
+
+      function captureNext() {
+        if (index >= times.length) return findBestThumbnail(images);
+        video.currentTime = times[index];
+        video.addEventListener("seeked", async function snap() {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const img = new Image();
+          img.src = canvas.toDataURL("image/jpeg");
+          img.style.margin = "5px";
+          thumbs.appendChild(img);
+          const hasFace = await detectFace(canvas);
+          images.push({ src: img.src, hasFace });
+          video.removeEventListener("seeked", snap);
+          index++;
+          captureNext();
+        });
+      }
+      captureNext();
+    }
+
+    async function detectFace(canvas) {
+      const detections = await faceapi.detectAllFaces(canvas, new faceapi.TinyFaceDetectorOptions());
+      return detections.length > 0;
+    }
+
+    async function findBestThumbnail(images) {
+      let bestImage = images[0]?.src || "", bestScore = 0;
+      for (const img of images) {
+        const score = (await analyzeImage(img.src)) + (img.hasFace ? 0.5 : 0);
+        if (score > bestScore) {
+          bestScore = score;
+          bestImage = img.src;
         }
+      }
+      document.getElementById("bestThumbnail").src = bestImage;
+      document.getElementById("bestThumbnail").style.display = "block";
+      const link = document.getElementById("downloadLink");
+      link.href = bestImage;
+      link.style.display = "block";
+    }
 
-        function captureFrames(video, times, canvas, ctx) {
-            let thumbs = document.getElementById("thumbnails"), images = [];
-            thumbs.innerHTML = "";
-            canvas.width = 1280; canvas.height = 720;
-            let index = 0;
-
-            function captureNext() {
-                if (index >= times.length) return findBestThumbnail(images);
-                video.currentTime = times[index];
-                video.addEventListener("seeked", async function snap() {
-                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    let img = new Image();
-                    img.src = canvas.toDataURL("image/jpeg");
-                    img.style.margin = "5px";
-                    thumbs.appendChild(img);
-                    images.push({ src: img.src, hasFace: await detectFace(canvas) });
-
-                    video.removeEventListener("seeked", snap);
-                    index++;
-                    captureNext();
-                });
-            }
-            captureNext();
-        }
-
-        async function detectFace(canvas) {
-            let detections = await faceapi.detectAllFaces(canvas, new faceapi.TinyFaceDetectorOptions());
-            return detections.length > 0;
-        }
-
-        async function findBestThumbnail(images) {
-            let bestImage = images[0]?.src || "", bestScore = 0;
-
-            for (let img of images) {
-                let score = (await analyzeImage(img.src)) + (img.hasFace ? 0.5 : 0); 
-                if (score > bestScore) [bestImage, bestScore] = [img.src, score];
-            }
-
-            document.getElementById("bestThumbnail").src = bestImage;
-            document.getElementById("bestThumbnail").style.display = "block";
-            let link = document.getElementById("downloadLink");
-            link.href = bestImage;
-            link.style.display = "block";
-        }
-
-        async function analyzeImage(imageSrc) {
-            let img = new Image();
-            img.src = imageSrc;
-            await img.decode();
-            let tensor = tf.browser.fromPixels(img).mean().dataSync()[0];
-            return tensor;
-        }
-    </script>
+    async function analyzeImage(imageSrc) {
+      const img = new Image();
+      img.src = imageSrc;
+      await img.decode();
+      const tensor = tf.browser.fromPixels(img).mean().dataSync()[0];
+      return tensor;
+    }
+  </script>
 </body>
 </html>
