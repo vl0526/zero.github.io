@@ -37,6 +37,8 @@
       if (!file) return alert("Chọn video trước!");
       const desiredCount = parseInt(document.getElementById("thumbnailCount").value);
       const videoURL = URL.createObjectURL(file);
+      
+      // Tạo video element để lấy duration và trích xuất frame
       const video = document.createElement("video");
       video.src = videoURL;
       video.muted = true;
@@ -46,19 +48,19 @@
       const duration = Math.min(video.duration, 300);
       const baseInterval = 5;
       let interval = baseInterval;
-      if(duration / desiredCount < baseInterval) interval = duration / desiredCount;
+      if (duration / desiredCount < baseInterval) interval = duration / desiredCount;
       
-      // Mảng các thời điểm ban đầu
+      // Tạo mảng thời điểm ban đầu
       let times = [];
       for (let t = 0; t < duration; t += interval) {
         times.push(t);
       }
       
-      let uniqueImages = await extractUniqueFrames(video, times, videoURL);
+      let uniqueImages = await extractUniqueFrames(video, times);
       
       // Nếu chưa đủ, tiếp tục trích xuất thêm từ thời điểm sau cùng
       let extraTime = times[times.length - 1] + interval;
-      while(uniqueImages.length < desiredCount && extraTime < duration) {
+      while (uniqueImages.length < desiredCount && extraTime < duration) {
         try {
           const dataURL = await captureFrameAtTime(video, extraTime);
           const contrast = await analyzeImage(dataURL).catch(() => 0);
@@ -72,7 +74,7 @@
         extraTime += interval;
       }
       
-      if(uniqueImages.length === 0) return alert("Không trích xuất được ảnh phù hợp.");
+      if (uniqueImages.length === 0) return alert("Không trích xuất được ảnh phù hợp.");
       
       const bestImage = await findBestThumbnail(uniqueImages.map(item => item.src));
       document.getElementById("bestThumbnail").src = bestImage;
@@ -82,7 +84,7 @@
       link.style.display = "inline-block";
     }
     
-    async function extractUniqueFrames(video, times, fileURL) {
+    async function extractUniqueFrames(video, times) {
       let uniqueImages = [];
       for (let t of times) {
         try {
@@ -101,16 +103,17 @@
     
     function captureFrameAtTime(video, time) {
       return new Promise((resolve, reject) => {
-        video.currentTime = time;
-        video.onseeked = () => {
+        function onSeeked() {
           const canvas = document.createElement("canvas");
           canvas.width = 1280;
           canvas.height = 720;
           const ctx = canvas.getContext("2d");
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
           resolve(canvas.toDataURL("image/jpeg"));
-        };
-        video.onerror = reject;
+        }
+        video.currentTime = time;
+        video.addEventListener("seeked", onSeeked, { once: true });
+        video.addEventListener("error", reject, { once: true });
       });
     }
     
