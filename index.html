@@ -1,17 +1,17 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Trích Xuất Thumbnail Video</title>
-  <style>
-    body { font-family: Arial, sans-serif; text-align: center; background: #000; color: #fff; }
-    button, input, select { padding: 10px; margin: 10px; cursor: pointer; border: none; font-size: 16px; }
-    button { background: #00aaff; color: #fff; }
-    #thumbnails img { width: 120px; height: auto; margin: 5px; border: 2px solid #fff; }
-    #bestThumbnail { max-width: 640px; display: none; margin-top: 20px; }
-    #downloadLink { display: none; color: #00ffcc; font-size: 18px; text-decoration: none; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trích Xuất Thumbnail Video</title>
+<style>
+  body { font-family: Arial, sans-serif; text-align: center; background: #000; color: #fff; }
+  button, input, select { padding: 10px; margin: 10px; cursor: pointer; border: none; font-size: 16px; }
+  button { background: #00aaff; color: #fff; }
+  #thumbnails img { width: 120px; margin: 5px; border: 2px solid #fff; }
+  #bestThumbnail { max-width: 640px; display: none; margin-top: 20px; }
+  #downloadLink { display: none; color: #00ffcc; font-size: 18px; text-decoration: none; }
+</style>
 </head>
 <body>
   <h2>Trích Xuất & Chọn Thumbnail Đẹp Nhất</h2>
@@ -22,62 +22,84 @@
     <option value="30" selected>30 Ảnh</option>
     <option value="50">50 Ảnh</option>
   </select>
-  <button onclick="extractThumbnails()">Bắt Đầu</button>
+  <button onclick="startExtraction()">Bắt Đầu</button>
   <div id="thumbnails"></div>
   <h3>Ảnh Đẹp Nhất:</h3>
   <img id="bestThumbnail">
   <a id="downloadLink" download="best_thumbnail.jpg">Tải Ảnh Đẹp Nhất</a>
-
   <script>
-    async function extractThumbnails() {
+    async function startExtraction() {
       const file = document.getElementById("videoInput").files[0];
-      if (!file) return alert("Chọn video trước!");
-
+      if (!file) { alert("Chọn video trước!"); return; }
+      const count = parseInt(document.getElementById("thumbnailCount").value);
       const video = document.createElement("video");
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
       video.src = URL.createObjectURL(file);
       video.muted = true;
-      video.play();
-
-      video.addEventListener("loadedmetadata", () => {
-        const duration = Math.min(video.duration, 300);
-        const count = parseInt(document.getElementById("thumbnailCount").value);
-        const interval = Math.max(5, Math.floor(duration / count));
-        const times = Array.from({ length: count }, (_, i) => i * interval);
-
-        captureFrames(video, times, canvas, ctx);
+      await video.play();
+      await new Promise(res => video.addEventListener("loadedmetadata", res));
+      const duration = Math.min(video.duration, 300);
+      let interval = 5; if(duration / 5 < count) interval = duration / count;
+      const times = [];
+      for(let t = 0; t < duration && times.length < count; t += interval) times.push(t);
+      const canvas = document.createElement("canvas");
+      canvas.width = 1280; canvas.height = 720;
+      const ctx = canvas.getContext("2d");
+      const images = [];
+      for(const time of times) {
+        await seekToTime(video, time);
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataURL = canvas.toDataURL("image/jpeg");
+        images.push(dataURL);
+        displayThumbnail(dataURL);
+      }
+      findBestThumbnail(images);
+    }
+    function seekToTime(video, time) {
+      return new Promise(res => {
+        const handler = () => { video.removeEventListener("seeked", handler); setTimeout(res,100); };
+        video.addEventListener("seeked", handler);
+        video.currentTime = time;
       });
     }
-
-    function captureFrames(video, times, canvas, ctx) {
-      const thumbs = document.getElementById("thumbnails");
-      const images = [];
-      thumbs.innerHTML = "";
-      canvas.width = 1280;
-      canvas.height = 720;
-      let index = 0;
-
-      video.onseeked = function() {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const img = new Image();
-        img.src = canvas.toDataURL("image/jpeg");
-        thumbs.appendChild(img);
-        images.push(img.src);
-        index++;
-        if (index < times.length) {
-          video.currentTime = times[index];
-        } else {
-          findBestThumbnail(images);
-        }
-      };
-
-      video.currentTime = times[0];
+    function displayThumbnail(dataURL) {
+      const container = document.getElementById("thumbnails");
+      const img = new Image();
+      img.src = dataURL;
+      img.style.margin = "5px";
+      container.appendChild(img);
     }
-
-    function findBestThumbnail(images) {
-      if (images.length === 0) return;
-      const bestImage = images[Math.floor(Math.random() * images.length)];
+    async function analyzeImage(imageSrc) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "Anonymous";
+        img.src = imageSrc;
+        img.onload = () => {
+          const tempCanvas = document.createElement("canvas");
+          tempCanvas.width = img.width;
+          tempCanvas.height = img.height;
+          const tctx = tempCanvas.getContext("2d");
+          tctx.drawImage(img, 0, 0);
+          const data = tctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height).data;
+          const pixels = [];
+          for(let i = 0; i < data.length; i += 4) {
+            const gray = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+            pixels.push(gray);
+          }
+          const mean = pixels.reduce((a,b)=>a+b,0)/pixels.length;
+          const variance = pixels.reduce((acc, p)=>acc + Math.pow(p-mean,2),0)/pixels.length;
+          resolve(Math.sqrt(variance));
+        };
+        img.onerror = reject;
+      });
+    }
+    async function findBestThumbnail(images) {
+      let bestImage = images[0], bestScore = 0;
+      for(const src of images) {
+        try {
+          const score = await analyzeImage(src);
+          if(score > bestScore) { bestScore = score; bestImage = src; }
+        } catch(e) { console.error(e); }
+      }
       document.getElementById("bestThumbnail").src = bestImage;
       document.getElementById("bestThumbnail").style.display = "block";
       const link = document.getElementById("downloadLink");
