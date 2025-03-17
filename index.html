@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Thumbnail Extractor</title>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-    <script src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; background: #111; color: #fff; }
         button, input, select { padding: 10px; margin: 10px; cursor: pointer; border: none; font-size: 16px; }
@@ -34,7 +34,7 @@
         async function extractThumbnails() {
             let file = document.getElementById("videoInput").files[0];
             if (!file) return alert("Chọn video trước!");
-            await faceapi.nets.tinyFaceDetector.loadFromUri("https://cdn.jsdelivr.net/npm/face-api.js/weights");
+            await loadFaceAPI();
 
             let video = document.createElement("video"), canvas = document.createElement("canvas"), ctx = canvas.getContext("2d");
             video.src = URL.createObjectURL(file);
@@ -46,6 +46,18 @@
                 for (let t = 0; t < duration && times.length < count; t += step) times.push(t);
                 captureFrames(video, times, canvas, ctx);
             });
+        }
+
+        async function loadFaceAPI() {
+            if (!window.faceapi) {
+                await new Promise(resolve => {
+                    let script = document.createElement("script");
+                    script.src = "https://cdn.jsdelivr.net/npm/face-api.js";
+                    script.onload = resolve;
+                    document.body.appendChild(script);
+                });
+            }
+            await faceapi.nets.tinyFaceDetector.loadFromUri("https://cdn.jsdelivr.net/npm/face-api.js/weights");
         }
 
         function captureFrames(video, times, canvas, ctx) {
