@@ -1,110 +1,155 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Trích Xuất Thumbnail Video</title>
-<style>
-  body { font-family: Arial, sans-serif; text-align: center; background: #000; color: #fff; }
-  button, input, select { padding: 10px; margin: 10px; cursor: pointer; border: none; font-size: 16px; }
-  button { background: #00aaff; color: #fff; }
-  #thumbnails img { width: 120px; margin: 5px; border: 2px solid #fff; }
-  #bestThumbnail { max-width: 640px; display: none; margin-top: 20px; }
-  #downloadLink { display: none; color: #00ffcc; font-size: 18px; text-decoration: none; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SuperPro Video Thumbnail Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: 'Roboto', sans-serif; background: #121212; color: #fff;
+      display: flex; flex-direction: column; align-items: center; padding: 20px;
+    }
+    h1 { margin-bottom: 10px; }
+    .container { max-width: 800px; width: 100%; }
+    .input-group { margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center; }
+    input[type="file"], select { padding: 8px; border-radius: 4px; border: none; }
+    button { padding: 10px 20px; background: #00aaff; border: none; border-radius: 4px; color: #fff; cursor: pointer; font-weight: bold; }
+    button:hover { background: #008ecc; }
+    #loader { display: none; margin: 10px; font-size: 16px; }
+    #thumbnails { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; justify-content: center; }
+    #thumbnails img { width: 150px; height: auto; border: 2px solid #fff; border-radius: 4px; }
+    .best-container { text-align: center; margin-top: 20px; }
+    #bestThumbnail { max-width: 100%; border: 3px solid #00aaff; border-radius: 4px; display: none; }
+    #downloadLink { display: none; margin-top: 10px; text-decoration: none; color: #00ffcc; font-size: 18px; }
+  </style>
 </head>
 <body>
-  <h2>Trích Xuất & Chọn Thumbnail Đẹp Nhất</h2>
-  <input type="file" id="videoInput" accept="video/*">
-  <select id="thumbnailCount">
-    <option value="5">5 Ảnh</option>
-    <option value="10">10 Ảnh</option>
-    <option value="30" selected>30 Ảnh</option>
-    <option value="50">50 Ảnh</option>
-  </select>
-  <button onclick="startExtraction()">Bắt Đầu</button>
-  <div id="thumbnails"></div>
-  <h3>Ảnh Đẹp Nhất:</h3>
-  <img id="bestThumbnail">
-  <a id="downloadLink" download="best_thumbnail.jpg">Tải Ảnh Đẹp Nhất</a>
+  <div class="container">
+    <h1>SuperPro Video Thumbnail Generator</h1>
+    <div class="input-group">
+      <input type="file" id="videoInput" accept="video/*">
+      <select id="thumbnailCount">
+        <option value="5">5 Thumbnails</option>
+        <option value="10">10 Thumbnails</option>
+        <option value="30" selected>30 Thumbnails</option>
+        <option value="50">50 Thumbnails</option>
+      </select>
+      <button onclick="startExtraction()">Generate Thumbnails</button>
+    </div>
+    <div id="loader">Processing... Please wait.</div>
+    <div id="thumbnails"></div>
+    <div class="best-container">
+      <h2>Best Thumbnail</h2>
+      <img id="bestThumbnail" alt="Best Thumbnail">
+      <br>
+      <a id="downloadLink" download="best_thumbnail.jpg">Download Best Thumbnail</a>
+    </div>
+  </div>
   <script>
     async function startExtraction() {
+      document.getElementById("loader").style.display = "block";
+      document.getElementById("thumbnails").innerHTML = "";
+      document.getElementById("bestThumbnail").style.display = "none";
+      document.getElementById("downloadLink").style.display = "none";
+      
       const file = document.getElementById("videoInput").files[0];
-      if (!file) { alert("Chọn video trước!"); return; }
+      if (!file) { alert("Please select a video file."); document.getElementById("loader").style.display = "none"; return; }
+      
       const count = parseInt(document.getElementById("thumbnailCount").value);
       const video = document.createElement("video");
       video.src = URL.createObjectURL(file);
       video.muted = true;
       await video.play();
-      await new Promise(res => video.addEventListener("loadedmetadata", res));
+      await new Promise(resolve => video.addEventListener("loadedmetadata", resolve));
+      
+      // Dùng mỗi 5 giây (nếu video dài đủ) – nếu không, sử dụng số frame tối đa có thể
       const duration = Math.min(video.duration, 300);
-      let interval = 5; if(duration / 5 < count) interval = duration / count;
-      const times = [];
-      for(let t = 0; t < duration && times.length < count; t += interval) times.push(t);
+      let times = [];
+      for (let t = 0; t < duration && times.length < count; t += 5) {
+        times.push(t);
+      }
+      
       const canvas = document.createElement("canvas");
-      canvas.width = 1280; canvas.height = 720;
+      canvas.width = 1280;
+      canvas.height = 720;
       const ctx = canvas.getContext("2d");
-      const images = [];
-      for(const time of times) {
-        await seekToTime(video, time);
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const dataURL = canvas.toDataURL("image/jpeg");
+      let images = [];
+      
+      for (let t of times) {
+        const dataURL = await captureFrameAtTime(video, t, canvas, ctx);
         images.push(dataURL);
         displayThumbnail(dataURL);
       }
-      findBestThumbnail(images);
+      
+      const bestImage = await findBestThumbnail(images);
+      document.getElementById("bestThumbnail").src = bestImage;
+      document.getElementById("bestThumbnail").style.display = "block";
+      const downloadLink = document.getElementById("downloadLink");
+      downloadLink.href = bestImage;
+      downloadLink.style.display = "inline-block";
+      
+      document.getElementById("loader").style.display = "none";
     }
-    function seekToTime(video, time) {
-      return new Promise(res => {
-        const handler = () => { video.removeEventListener("seeked", handler); setTimeout(res,100); };
-        video.addEventListener("seeked", handler);
+    
+    function captureFrameAtTime(video, time, canvas, ctx) {
+      return new Promise(resolve => {
         video.currentTime = time;
+        video.onseeked = () => {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL("image/jpeg"));
+        };
       });
     }
+    
     function displayThumbnail(dataURL) {
       const container = document.getElementById("thumbnails");
       const img = new Image();
       img.src = dataURL;
-      img.style.margin = "5px";
       container.appendChild(img);
     }
-    async function analyzeImage(imageSrc) {
+    
+    async function analyzeImage(dataURL) {
       return new Promise((resolve, reject) => {
         const img = new Image();
         img.crossOrigin = "Anonymous";
-        img.src = imageSrc;
+        img.src = dataURL;
         img.onload = () => {
           const tempCanvas = document.createElement("canvas");
           tempCanvas.width = img.width;
           tempCanvas.height = img.height;
-          const tctx = tempCanvas.getContext("2d");
-          tctx.drawImage(img, 0, 0);
-          const data = tctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height).data;
-          const pixels = [];
-          for(let i = 0; i < data.length; i += 4) {
-            const gray = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
-            pixels.push(gray);
+          const tempCtx = tempCanvas.getContext("2d");
+          tempCtx.drawImage(img, 0, 0);
+          const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+          const data = imageData.data;
+          let luminances = [];
+          for (let i = 0; i < data.length; i += 4) {
+            const r = data[i], g = data[i+1], b = data[i+2];
+            const lum = 0.299*r + 0.587*g + 0.114*b;
+            luminances.push(lum);
           }
-          const mean = pixels.reduce((a,b)=>a+b,0)/pixels.length;
-          const variance = pixels.reduce((acc, p)=>acc + Math.pow(p-mean,2),0)/pixels.length;
-          resolve(Math.sqrt(variance));
+          const mean = luminances.reduce((a, b) => a + b, 0) / luminances.length;
+          const variance = luminances.reduce((sum, lum) => sum + Math.pow(lum - mean, 2), 0) / luminances.length;
+          const std = Math.sqrt(variance);
+          resolve(std);
         };
-        img.onerror = reject;
+        img.onerror = () => reject(new Error("Image load error"));
       });
     }
+    
     async function findBestThumbnail(images) {
-      let bestImage = images[0], bestScore = 0;
-      for(const src of images) {
+      let bestImage = images[0];
+      let bestScore = -Infinity;
+      for (const dataURL of images) {
         try {
-          const score = await analyzeImage(src);
-          if(score > bestScore) { bestScore = score; bestImage = src; }
-        } catch(e) { console.error(e); }
+          const score = await analyzeImage(dataURL);
+          if (score > bestScore) { bestScore = score; bestImage = dataURL; }
+        } catch (e) { console.error(e); }
       }
-      document.getElementById("bestThumbnail").src = bestImage;
-      document.getElementById("bestThumbnail").style.display = "block";
-      const link = document.getElementById("downloadLink");
-      link.href = bestImage;
-      link.style.display = "block";
+      return bestImage;
     }
   </script>
 </body>
