@@ -9,17 +9,14 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; }
-    body {
-      margin: 0; font-family: 'Roboto', sans-serif; background: #121212; color: #fff;
-      display: flex; flex-direction: column; align-items: center; padding: 20px;
-    }
+    body { margin: 0; font-family: 'Roboto', sans-serif; background: #121212; color: #fff; display: flex; flex-direction: column; align-items: center; padding: 20px; }
     h1 { margin-bottom: 10px; }
     .container { max-width: 800px; width: 100%; }
     .input-group { margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center; }
     input[type="file"], select { padding: 8px; border-radius: 4px; border: none; }
     button { padding: 10px 20px; background: #00aaff; border: none; border-radius: 4px; color: #fff; cursor: pointer; font-weight: bold; }
     button:hover { background: #008ecc; }
-    #loader { display: none; margin: 10px; font-size: 16px; }
+    #loader { margin: 10px; font-size: 16px; }
     #thumbnails { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; justify-content: center; }
     #thumbnails img { width: 150px; height: auto; border: 2px solid #fff; border-radius: 4px; }
     .best-container { text-align: center; margin-top: 20px; }
@@ -40,7 +37,7 @@
       </select>
       <button onclick="startExtraction()">Generate Thumbnails</button>
     </div>
-    <div id="loader">Processing... Please wait.</div>
+    <div id="loader"></div>
     <div id="thumbnails"></div>
     <div class="best-container">
       <h2>Best Thumbnail</h2>
@@ -51,57 +48,63 @@
   </div>
   <script>
     async function startExtraction() {
-      document.getElementById("loader").style.display = "block";
+      document.getElementById("loader").innerText = "Processing...";
       document.getElementById("thumbnails").innerHTML = "";
       document.getElementById("bestThumbnail").style.display = "none";
       document.getElementById("downloadLink").style.display = "none";
       
       const file = document.getElementById("videoInput").files[0];
-      if (!file) { alert("Please select a video file."); document.getElementById("loader").style.display = "none"; return; }
-      
+      if (!file) { alert("Please select a video file."); document.getElementById("loader").innerText = ""; return; }
       const count = parseInt(document.getElementById("thumbnailCount").value);
-      const video = document.createElement("video");
-      video.src = URL.createObjectURL(file);
-      video.muted = true;
-      await video.play();
-      await new Promise(resolve => video.addEventListener("loadedmetadata", resolve));
+      const fileURL = URL.createObjectURL(file);
       
-      // Dùng mỗi 5 giây (nếu video dài đủ) – nếu không, sử dụng số frame tối đa có thể
-      const duration = Math.min(video.duration, 300);
-      let times = [];
-      for (let t = 0; t < duration && times.length < count; t += 5) {
+      // Sử dụng một video element tạm để lấy duration
+      const tempVideo = document.createElement("video");
+      tempVideo.src = fileURL;
+      tempVideo.muted = true;
+      await tempVideo.play();
+      await new Promise(res => tempVideo.addEventListener("loadedmetadata", res));
+      const duration = Math.min(tempVideo.duration, 300);
+      let interval = 5;
+      if (duration / count < 5) interval = duration / count;
+      const times = [];
+      for (let t = 0; t < duration && times.length < count; t += interval) {
         times.push(t);
       }
       
-      const canvas = document.createElement("canvas");
-      canvas.width = 1280;
-      canvas.height = 720;
-      const ctx = canvas.getContext("2d");
-      let images = [];
-      
-      for (let t of times) {
-        const dataURL = await captureFrameAtTime(video, t, canvas, ctx);
-        images.push(dataURL);
-        displayThumbnail(dataURL);
-      }
+      // Đồng thời trích xuất frame cho mỗi timestamp
+      const promises = times.map(time =>
+        captureFrameAtTime(fileURL, time).then(dataURL => { displayThumbnail(dataURL); return dataURL; })
+      );
+      const images = await Promise.all(promises);
       
       const bestImage = await findBestThumbnail(images);
       document.getElementById("bestThumbnail").src = bestImage;
       document.getElementById("bestThumbnail").style.display = "block";
-      const downloadLink = document.getElementById("downloadLink");
-      downloadLink.href = bestImage;
-      downloadLink.style.display = "inline-block";
-      
-      document.getElementById("loader").style.display = "none";
+      const link = document.getElementById("downloadLink");
+      link.href = bestImage;
+      link.style.display = "inline-block";
+      document.getElementById("loader").innerText = "";
     }
     
-    function captureFrameAtTime(video, time, canvas, ctx) {
-      return new Promise(resolve => {
-        video.currentTime = time;
-        video.onseeked = () => {
+    function captureFrameAtTime(fileURL, time) {
+      return new Promise((resolve, reject) => {
+        const video = document.createElement("video");
+        video.src = fileURL;
+        video.muted = true;
+        video.playsInline = true;
+        video.addEventListener("loadedmetadata", () => {
+          video.currentTime = time;
+        });
+        video.addEventListener("seeked", () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = 1280;
+          canvas.height = 720;
+          const ctx = canvas.getContext("2d");
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
           resolve(canvas.toDataURL("image/jpeg"));
-        };
+        });
+        video.addEventListener("error", (e) => reject(e));
       });
     }
     
@@ -121,14 +124,13 @@
           const tempCanvas = document.createElement("canvas");
           tempCanvas.width = img.width;
           tempCanvas.height = img.height;
-          const tempCtx = tempCanvas.getContext("2d");
-          tempCtx.drawImage(img, 0, 0);
-          const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-          const data = imageData.data;
+          const ctx = tempCanvas.getContext("2d");
+          ctx.drawImage(img, 0, 0);
+          const data = ctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height).data;
           let luminances = [];
           for (let i = 0; i < data.length; i += 4) {
             const r = data[i], g = data[i+1], b = data[i+2];
-            const lum = 0.299*r + 0.587*g + 0.114*b;
+            const lum = 0.299 * r + 0.587 * g + 0.114 * b;
             luminances.push(lum);
           }
           const mean = luminances.reduce((a, b) => a + b, 0) / luminances.length;
@@ -136,7 +138,7 @@
           const std = Math.sqrt(variance);
           resolve(std);
         };
-        img.onerror = () => reject(new Error("Image load error"));
+        img.onerror = reject;
       });
     }
     
@@ -146,6 +148,7 @@
       for (const dataURL of images) {
         try {
           const score = await analyzeImage(dataURL);
+          // Ảnh có độ tương phản cao hơn (std cao hơn) được xem là đẹp hơn
           if (score > bestScore) { bestScore = score; bestImage = dataURL; }
         } catch (e) { console.error(e); }
       }
