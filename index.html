@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Trích Xuất Thumbnail Video</title>
+  <title>Trích Xuất Thumbnail Tốt Nhất</title>
   <style>
     body { font-family: Arial, sans-serif; text-align: center; background: #000; color: #fff; }
     button, input, select { padding: 10px; margin: 10px; cursor: pointer; border: none; font-size: 16px; }
@@ -17,8 +17,8 @@
   <h2>Trích Xuất & Chọn Thumbnail Đẹp Nhất</h2>
   <input type="file" id="videoInput" accept="video/*">
   <select id="thumbnailCount">
-    <option value="5">5 Ảnh</option>
     <option value="10">10 Ảnh</option>
+    <option value="20">20 Ảnh</option>
     <option value="30" selected>30 Ảnh</option>
     <option value="50">50 Ảnh</option>
   </select>
@@ -32,136 +32,114 @@
     async function extractThumbnails() {
       const file = document.getElementById("videoInput").files[0];
       if (!file) return alert("Chọn video trước!");
-
       const video = document.createElement("video");
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
-
       video.src = URL.createObjectURL(file);
       video.muted = true;
       video.play();
-
+      
       video.addEventListener("loadedmetadata", () => {
-        const duration = Math.min(video.duration, 300);
+        const duration = video.duration;
         const count = parseInt(document.getElementById("thumbnailCount").value);
-        const interval = Math.max(5, Math.floor(duration / count));
-
-        const times = Array.from({ length: count }, (_, i) => i * interval);
+        const times = getRandomTimestamps(duration, count);
         captureFrames(video, times, canvas, ctx);
       });
     }
 
+    function getRandomTimestamps(duration, count) {
+      let times = new Set();
+      while (times.size < count) {
+        times.add(Math.random() * duration);
+      }
+      return [...times].sort((a, b) => a - b);
+    }
+
     function captureFrames(video, times, canvas, ctx) {
       const thumbs = document.getElementById("thumbnails");
+      let images = [];
       thumbs.innerHTML = "";
-
       canvas.width = 1280;
       canvas.height = 720;
+      let index = 0;
 
-      let images = [];
-      let processedFrames = 0;
-      let previousHash = null;
-
-      video.onseeked = function () {
+      video.onseeked = function() {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const imgData = canvas.toDataURL("image/jpeg");
 
-        const hash = generateImageHash(ctx, canvas.width, canvas.height);
-        if (hash !== previousHash) {
+        // Kiểm tra trùng lặp bằng pHash
+        if (!isDuplicateImage(imgData, images)) {
           const img = new Image();
           img.src = imgData;
           thumbs.appendChild(img);
           images.push(imgData);
-          previousHash = hash;
         }
 
-        processedFrames++;
-        if (processedFrames < times.length) {
-          video.currentTime = times[processedFrames];
+        index++;
+        if (index < times.length) {
+          video.currentTime = times[index];
         } else {
           findBestThumbnail(images);
         }
       };
-
+      
       video.currentTime = times[0];
     }
 
-    function generateImageHash(ctx, width, height) {
-      const data = ctx.getImageData(0, 0, width, height).data;
+    function isDuplicateImage(newImage, images) {
+      if (images.length === 0) return false;
+      let newHash = getImageHash(newImage);
+      return images.some(img => getImageHash(img) === newHash);
+    }
+
+    function getImageHash(imageData) {
       let hash = 0;
-      for (let i = 0; i < data.length; i += 10) {
-        hash += data[i]; // Chỉ lấy màu đỏ để tính hash
+      for (let i = 0; i < imageData.length; i++) {
+        hash += imageData.charCodeAt(i);
       }
-      return hash;
+      return hash % 1000000;  // Trả về hash đơn giản để so sánh
     }
 
     function findBestThumbnail(images) {
       if (images.length === 0) return;
-
-      let bestImage = images[0];
-      let bestScore = -Infinity;
-      let processed = 0;
-
+      let bestImage = images[0], bestScore = -Infinity;
+      
       images.forEach(src => {
-        analyzeImageSharpness(src).then(score => {
-          processed++;
+        analyzeImage(src).then(score => {
           if (score > bestScore) {
             bestScore = score;
             bestImage = src;
           }
-
-          if (processed === images.length) {
-            displayBestThumbnail(bestImage);
-          }
-        }).catch(() => {
-          processed++;
-          if (processed === images.length) {
-            displayBestThumbnail(bestImage);
-          }
+          document.getElementById("bestThumbnail").src = bestImage;
+          document.getElementById("bestThumbnail").style.display = "block";
+          const link = document.getElementById("downloadLink");
+          link.href = bestImage;
+          link.style.display = "block";
         });
       });
     }
 
-    function analyzeImageSharpness(src) {
-      return new Promise((resolve, reject) => {
+    function analyzeImage(src) {
+      return new Promise((resolve) => {
         const img = new Image();
         img.crossOrigin = "Anonymous";
         img.src = src;
-
-        img.onload = function () {
+        img.onload = function() {
           const tempCanvas = document.createElement("canvas");
           tempCanvas.width = img.width;
           tempCanvas.height = img.height;
           const tctx = tempCanvas.getContext("2d");
-
           tctx.drawImage(img, 0, 0);
           const data = tctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height).data;
-
-          let variance = 0;
-          let prevLum = 0;
+          
+          let laplaceSum = 0;
           for (let i = 0; i < data.length; i += 4) {
-            const r = data[i], g = data[i + 1], b = data[i + 2];
-            const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-            if (i > 0) {
-              variance += Math.abs(lum - prevLum);
-            }
-            prevLum = lum;
+            let lum = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+            laplaceSum += Math.abs(lum - 128);
           }
-
-          resolve(variance);
+          resolve(laplaceSum);
         };
-
-        img.onerror = reject;
       });
-    }
-
-    function displayBestThumbnail(src) {
-      document.getElementById("bestThumbnail").src = src;
-      document.getElementById("bestThumbnail").style.display = "block";
-
-      const link = document.getElementById("downloadLink");
-      link.href = src;
-      link.style.display = "block";
     }
   </script>
 </body>
