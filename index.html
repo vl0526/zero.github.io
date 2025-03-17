@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Trích Xuất Thumbnail Tốt Nhất</title>
+  <title>Trích Xuất Thumbnail Khung Cảnh Đẹp</title>
   <style>
     body { font-family: Arial, sans-serif; text-align: center; background: #000; color: #fff; }
     button, input, select { padding: 10px; margin: 10px; cursor: pointer; border: none; font-size: 16px; }
@@ -14,7 +14,7 @@
   </style>
 </head>
 <body>
-  <h2>Trích Xuất & Chọn Thumbnail Đẹp Nhất</h2>
+  <h2>Trích Xuất & Chọn Thumbnail Khung Cảnh Đẹp Nhất</h2>
   <input type="file" id="videoInput" accept="video/*">
   <select id="thumbnailCount">
     <option value="10">10 Ảnh</option>
@@ -67,59 +67,42 @@
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const imgData = canvas.toDataURL("image/jpeg");
 
-        // Kiểm tra trùng lặp bằng pHash
-        if (!isDuplicateImage(imgData, images)) {
-          const img = new Image();
-          img.src = imgData;
-          thumbs.appendChild(img);
-          images.push(imgData);
-        }
+        // Chỉ giữ lại ảnh có bố cục khung cảnh đẹp
+        analyzeScene(imgData).then(score => {
+          if (score > 50) {  // Ngưỡng xác định ảnh có khung cảnh đẹp
+            const img = new Image();
+            img.src = imgData;
+            thumbs.appendChild(img);
+            images.push({ src: imgData, score });
+          }
 
-        index++;
-        if (index < times.length) {
-          video.currentTime = times[index];
-        } else {
-          findBestThumbnail(images);
-        }
+          index++;
+          if (index < times.length) {
+            video.currentTime = times[index];
+          } else {
+            findBestThumbnail(images);
+          }
+        });
       };
       
       video.currentTime = times[0];
     }
 
-    function isDuplicateImage(newImage, images) {
-      if (images.length === 0) return false;
-      let newHash = getImageHash(newImage);
-      return images.some(img => getImageHash(img) === newHash);
-    }
-
-    function getImageHash(imageData) {
-      let hash = 0;
-      for (let i = 0; i < imageData.length; i++) {
-        hash += imageData.charCodeAt(i);
-      }
-      return hash % 1000000;  // Trả về hash đơn giản để so sánh
-    }
-
     function findBestThumbnail(images) {
       if (images.length === 0) return;
-      let bestImage = images[0], bestScore = -Infinity;
       
-      images.forEach(src => {
-        analyzeImage(src).then(score => {
-          if (score > bestScore) {
-            bestScore = score;
-            bestImage = src;
-          }
-          document.getElementById("bestThumbnail").src = bestImage;
-          document.getElementById("bestThumbnail").style.display = "block";
-          const link = document.getElementById("downloadLink");
-          link.href = bestImage;
-          link.style.display = "block";
-        });
-      });
+      // Chọn ảnh có điểm khung cảnh cao nhất
+      images.sort((a, b) => b.score - a.score);
+      const bestImage = images[0].src;
+
+      document.getElementById("bestThumbnail").src = bestImage;
+      document.getElementById("bestThumbnail").style.display = "block";
+      const link = document.getElementById("downloadLink");
+      link.href = bestImage;
+      link.style.display = "block";
     }
 
-    function analyzeImage(src) {
+    function analyzeScene(src) {
       return new Promise((resolve) => {
         const img = new Image();
         img.crossOrigin = "Anonymous";
@@ -131,13 +114,29 @@
           const tctx = tempCanvas.getContext("2d");
           tctx.drawImage(img, 0, 0);
           const data = tctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height).data;
-          
-          let laplaceSum = 0;
+
+          let skyPixels = 0;
+          let groundPixels = 0;
+          let otherPixels = 0;
+
           for (let i = 0; i < data.length; i += 4) {
-            let lum = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
-            laplaceSum += Math.abs(lum - 128);
+            const r = data[i], g = data[i+1], b = data[i+2];
+
+            // Phân loại pixel dựa vào màu sắc
+            if (r > 150 && g > 150 && b > 150) {
+              skyPixels++; // Màu sáng, có thể là bầu trời
+            } else if (r < 100 && g < 100 && b < 100) {
+              groundPixels++; // Màu tối, có thể là mặt đất hoặc cảnh vật
+            } else {
+              otherPixels++; // Các yếu tố khác
+            }
           }
-          resolve(laplaceSum);
+
+          // Tính toán điểm dựa trên tỷ lệ vùng cảnh quan
+          const totalPixels = skyPixels + groundPixels + otherPixels;
+          const sceneScore = ((skyPixels + groundPixels) / totalPixels) * 100;
+
+          resolve(sceneScore);
         };
       });
     }
