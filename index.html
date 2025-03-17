@@ -1,1 +1,70 @@
-<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Trả Lời Câu Hỏi LCú Nyã</title><style>*{margin:0;padding:0;box-sizing:border-box}body{background:radial-gradient(circle,#141e30,#243b55);min-height:100vh;font-family:"Segoe UI",sans-serif;color:#fff;display:flex;align-items:center;justify-content:center;position:relative;padding:20px}#counter{position:absolute;top:20px;right:20px;font-size:1rem}.card{background:linear-gradient(135deg,#ff416c,#ff4b2b);width:100%;max-width:600px;padding:30px;border-radius:20px;box-shadow:0 15px 30px rgba(0,0,0,0.3);transform-style:preserve-3d;perspective:1000px;transition:transform 0.6s ease}.card:hover{transform:rotateY(10deg) rotateX(10deg)}.question{margin-bottom:20px;font-size:1.2rem;font-weight:700;transform:translateZ(40px)}.options{margin-left:20px;margin-bottom:20px} .options label{margin-right:10px;cursor:pointer}.btn{display:inline-block;padding:12px 25px;background:#fff;color:#ff416c;border:none;border-radius:8px;font-size:1rem;font-weight:bold;cursor:pointer;transform:translateZ(30px);transition:background 0.3s}.btn:hover{background:#ffe6e6}.hidden{display:none}</style></head><body><div id="counter">Ghé: ...</div><div class="card" id="formCard"><div id="qForm"><div class="question">Câu 1: Mày tên gì?</div><div class="options"><input type="radio" id="q1a" name="q1" value="ĐẶC CÔNG"><label for="q1a">ĐẶC CÔNG</label><input type="radio" id="q1b" name="q1" value="NGÔN LUYỀN"><label for="q1b">NGÔN LUYỀN</label><input type="radio" id="q1c" name="q1" value="TRUNG QUỐC"><label for="q1c">TRUNG QUỐC</label><input type="radio" id="q1d" name="q1" value="ĐĂNG LỎ"><label for="q1d">ĐĂNG LỎ</label></div><div class="question">Câu 2: Chọn giới tính?</div><div class="options"><input type="radio" id="q2a" name="q2" value="nam"><label for="q2a">nam</label><input type="radio" id="q2b" name="q2" value="nữ"><label for="q2b">nữ</label><input type="radio" id="q2c" name="q2" value="bê đê"><label for="q2c">bê đê</label></div><div class="question" id="q3Label">Câu 3: Bạn có thấy bạn ?</div><div class="options"><input type="radio" id="q3a" name="q3" value="có"><label for="q3a">có</label><input type="radio" id="q3b" name="q3" value="không"><label for="q3b">không</label><input type="radio" id="q3c" name="q3" value="tao biết mà"><label for="q3c">tao biết mà</label></div><div class="question">Câu 4: Bạn sẽ được chuyển hướng trong 5 giây</div><button class="btn" id="redirectBtn">Xác nhận</button></div><div id="q5" class="hidden"><div class="question">Câu 5: nhầm bro</div></div></div><script>fetch("https://api.countapi.xyz/hit/yourdomain/visits").then(r=>r.json()).then(d=>{document.getElementById("counter").innerText="Ghé: "+d.value}).catch(e=>{document.getElementById("counter").innerText="Ghé: N/A"});if(localStorage.getItem("visited")==="true"){document.getElementById("qForm").classList.add("hidden"),document.getElementById("q5").classList.remove("hidden")}document.querySelectorAll('input[name="q2"]').forEach(el=>{el.addEventListener("change",()=>{let val=el.value,lab=document.getElementById("q3Label");if(val==="nam")lab.innerText="Câu 3: Bạn có thấy bạn (đẹp trai) ?";else if(val==="nữ")lab.innerText="Câu 3: Bạn có thấy bạn (xinh gái) ?";else if(val==="bê đê")lab.innerText="Câu 3: Bạn có thấy bạn (say gếch (gay)) ?"})});document.getElementById("redirectBtn").addEventListener("click",()=>{localStorage.setItem("visited","true");let t=5,btn=document.getElementById("redirectBtn");btn.disabled=!0,btn.innerText="Chuyển hướng sau "+t+"s";let interval=setInterval(()=>{t--,btn.innerText="Chuyển hướng sau "+t+"s",t<=0&&(clearInterval(interval),window.location.href="https://s.net.vn/Sds8")},1e3)});</script></body></html>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thumbnail Generator</title>
+</head>
+<body>
+    <h2>Chuyển Video thành Thumbnail Chuyên Nghiệp</h2>
+    <input type="file" id="videoInput" accept="video/*">
+    <button onclick="uploadVideo()">Tạo Thumbnail</button>
+    <br><br>
+
+    <h3>Các Thumbnail:</h3>
+    <div id="thumbnails"></div>
+
+    <h3>Ảnh Đẹp Nhất:</h3>
+    <img id="bestThumbnail" style="display: none; max-width: 640px;">
+    <br>
+    <a id="downloadLink" style="display: none;" download="best_thumbnail.jpg">Tải ảnh đẹp nhất</a>
+
+    <script>
+        async function uploadVideo() {
+            const fileInput = document.getElementById("videoInput");
+            if (fileInput.files.length === 0) {
+                alert("Vui lòng chọn video");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("video", fileInput.files[0]);
+
+            try {
+                const response = await fetch("http://localhost:5000/upload", {
+                    method: "POST",
+                    body: formData,
+                });
+
+                const data = await response.json();
+                if (data.thumbnails) {
+                    displayThumbnails(data.thumbnails);
+                }
+
+                if (data.bestThumbnail) {
+                    const bestImg = data.bestThumbnail;
+                    document.getElementById("bestThumbnail").src = bestImg;
+                    document.getElementById("bestThumbnail").style.display = "block";
+
+                    document.getElementById("downloadLink").href = bestImg;
+                    document.getElementById("downloadLink").style.display = "block";
+                }
+            } catch (error) {
+                alert("Lỗi xử lý video");
+            }
+        }
+
+        function displayThumbnails(thumbnails) {
+            const thumbnailsDiv = document.getElementById("thumbnails");
+            thumbnailsDiv.innerHTML = "";
+            thumbnails.forEach((thumb) => {
+                const img = document.createElement("img");
+                img.src = `http://localhost:5000/${thumb}`;
+                img.style.maxWidth = "150px";
+                img.style.margin = "5px";
+                thumbnailsDiv.appendChild(img);
+            });
+        }
+    </script>
+</body>
+</html>
