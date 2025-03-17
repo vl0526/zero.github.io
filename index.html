@@ -12,10 +12,9 @@
     #bestThumbnail { max-width: 640px; display: none; margin-top: 20px; }
     #downloadLink { display: none; color: #00ffcc; font-size: 18px; text-decoration: none; }
   </style>
-  <!-- Tải TensorFlow.js -->
-  <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-  <!-- Tải phiên bản minified của face-api.js (không dùng CommonJS) -->
-  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js/dist/face-api.min.js"></script>
+  <!-- Tải TensorFlow.js & face-api.js theo dạng ES module -->
+  <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.21.0/dist/tf.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 </head>
 <body>
   <h2>Trích Xuất & Chọn Thumbnail Đẹp Nhất</h2>
@@ -33,16 +32,11 @@
   <a id="downloadLink" download="best_thumbnail.jpg">Tải Ảnh Đẹp Nhất</a>
 
   <script>
-    async function loadFaceAPI() {
-      // Sử dụng face-api.js đã được load từ CDN
-      // Sử dụng URL model từ justadudewhohacks (đã được host công khai)
-      await faceapi.nets.tinyFaceDetector.loadFromUri("https://justadudewhohacks.github.io/face-api.js/models");
-    }
-
     async function extractThumbnails() {
       const file = document.getElementById("videoInput").files[0];
       if (!file) return alert("Chọn video trước!");
-      await loadFaceAPI();
+      // Load model tinyFaceDetector từ URL công khai
+      await faceapi.nets.tinyFaceDetector.loadFromUri("https://justadudewhohacks.github.io/face-api.js/models");
 
       const video = document.createElement("video");
       const canvas = document.createElement("canvas");
@@ -51,11 +45,11 @@
       video.muted = true;
       video.play();
       video.addEventListener("loadedmetadata", () => {
+        // Dùng mỗi 5 giây, nếu video dài hơn thì trích xuất tối đa số frame theo lựa chọn
         const duration = Math.min(video.duration, 300);
         const count = parseInt(document.getElementById("thumbnailCount").value);
         const times = [];
-        const step = Math.floor(duration / count);
-        for (let t = 0; t < duration && times.length < count; t += step) {
+        for (let t = 0; t < duration && times.length < count; t += 5) {
           times.push(t);
         }
         captureFrames(video, times, canvas, ctx);
@@ -69,24 +63,22 @@
       canvas.width = 1280;
       canvas.height = 720;
       let index = 0;
-
-      function captureNext() {
-        if (index >= times.length) return findBestThumbnail(images);
-        video.currentTime = times[index];
-        video.addEventListener("seeked", async function snap() {
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          const img = new Image();
-          img.src = canvas.toDataURL("image/jpeg");
-          img.style.margin = "5px";
-          thumbs.appendChild(img);
-          const hasFace = await detectFace(canvas);
-          images.push({ src: img.src, hasFace });
-          video.removeEventListener("seeked", snap);
-          index++;
-          captureNext();
-        });
-      }
-      captureNext();
+      video.onseeked = async function() {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const img = new Image();
+        img.src = canvas.toDataURL("image/jpeg");
+        img.style.margin = "5px";
+        thumbs.appendChild(img);
+        const hasFace = await detectFace(canvas);
+        images.push({ src: img.src, hasFace });
+        index++;
+        if (index < times.length) {
+          video.currentTime = times[index];
+        } else {
+          findBestThumbnail(images);
+        }
+      };
+      video.currentTime = times[0];
     }
 
     async function detectFace(canvas) {
@@ -95,7 +87,8 @@
     }
 
     async function findBestThumbnail(images) {
-      let bestImage = images[0]?.src || "", bestScore = 0;
+      let bestImage = images[0] ? images[0].src : "";
+      let bestScore = 0;
       for (const img of images) {
         const score = (await analyzeImage(img.src)) + (img.hasFace ? 0.5 : 0);
         if (score > bestScore) {
@@ -114,8 +107,12 @@
       const img = new Image();
       img.src = imageSrc;
       await img.decode();
-      const tensor = tf.browser.fromPixels(img).mean().dataSync()[0];
-      return tensor;
+      const tensor = tf.browser.fromPixels(img);
+      const meanTensor = tensor.mean();
+      const meanValue = meanTensor.dataSync()[0];
+      tensor.dispose();
+      meanTensor.dispose();
+      return meanValue;
     }
   </script>
 </body>
