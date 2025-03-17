@@ -29,113 +29,83 @@
   <a id="downloadLink" download="best_thumbnail.jpg">Tải Ảnh Đẹp Nhất</a>
   
   <script>
-    const DUPLICATE_THRESHOLD = 10; // Hamming distance ngưỡng
-    const MIN_CONTRAST = 20; // Độ tương phản tối thiểu
-
     async function extractThumbnails() {
       const file = document.getElementById("videoInput").files[0];
       if (!file) return alert("Chọn video trước!");
-      const desiredCount = parseInt(document.getElementById("thumbnailCount").value);
-      const videoURL = URL.createObjectURL(file);
-      
-      // Tạo video tạm để lấy duration
-      const tempVideo = document.createElement("video");
-      tempVideo.src = videoURL;
-      tempVideo.muted = true;
-      await tempVideo.play();
-      await new Promise(res => tempVideo.addEventListener("loadedmetadata", res));
-      const duration = Math.min(tempVideo.duration, 300);
-      const baseInterval = 5;
-      let interval = baseInterval;
-      if(duration / desiredCount < baseInterval) interval = duration / desiredCount;
-      
-      // Tạo mảng thời điểm ban đầu
-      let times = [];
-      for (let t = 0; t < duration; t += interval) {
-        times.push(t);
-      }
-      
-      let uniqueImages = await extractUniqueFrames(videoURL, times);
-      
-      // Nếu chưa đủ, tiếp tục trích xuất thêm từ thời điểm cuối cùng + interval
-      let extraTime = times[times.length - 1] + interval;
-      while(uniqueImages.length < desiredCount && extraTime < duration) {
-        const dataURL = await captureFrameAtTime(videoURL, extraTime);
-        const contrast = await analyzeImage(dataURL).catch(() => 0);
-        if(contrast >= MIN_CONTRAST) {
-          const hash = await getImageHash(dataURL).catch(() => "");
-          if(!isDuplicate(hash, uniqueImages)) {
-            uniqueImages.push({ src: dataURL, hash });
-            displayThumbnail(dataURL);
-          }
-        }
-        extraTime += interval;
-      }
-      
-      // Chọn ra ảnh đẹp nhất dựa trên độ tương phản
-      const bestImage = await findBestThumbnail(uniqueImages.map(item => item.src));
-      document.getElementById("bestThumbnail").src = bestImage;
-      document.getElementById("bestThumbnail").style.display = "block";
-      const link = document.getElementById("downloadLink");
-      link.href = bestImage;
-      link.style.display = "block";
-    }
-    
-    async function extractUniqueFrames(videoURL, times) {
-      let uniqueImages = [];
-      for (let t of times) {
-        const dataURL = await captureFrameAtTime(videoURL, t);
-        const contrast = await analyzeImage(dataURL).catch(() => 0);
-        if(contrast < MIN_CONTRAST) continue;
-        let hash = await getImageHash(dataURL).catch(() => "");
-        if(!isDuplicate(hash, uniqueImages)) {
-          uniqueImages.push({ src: dataURL, hash });
-          displayThumbnail(dataURL);
-        }
-      }
-      return uniqueImages;
-    }
-    
-    function captureFrameAtTime(fileURL, time) {
-      return new Promise((resolve, reject) => {
-        const video = document.createElement("video");
-        video.src = fileURL;
-        video.muted = true;
-        video.playsInline = true;
-        video.addEventListener("loadedmetadata", () => {
-          video.currentTime = time;
-        });
-        video.addEventListener("seeked", () => {
-          const canvas = document.createElement("canvas");
-          canvas.width = 1280;
-          canvas.height = 720;
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          resolve(canvas.toDataURL("image/jpeg"));
-        });
-        video.addEventListener("error", (e) => reject(e));
+      const video = document.createElement("video");
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      video.src = URL.createObjectURL(file);
+      video.muted = true;
+      video.play();
+      video.addEventListener("loadedmetadata", () => {
+        const duration = Math.min(video.duration, 300);
+        const count = parseInt(document.getElementById("thumbnailCount").value);
+        const interval = Math.max(5, Math.floor(duration / count));
+        const times = Array.from({ length: count }, (_, i) => i * interval);
+        captureFrames(video, times, canvas, ctx);
       });
     }
-    
-    function displayThumbnail(dataURL) {
-      const container = document.getElementById("thumbnails");
-      const img = new Image();
-      img.src = dataURL;
-      container.appendChild(img);
+    function captureFrames(video, times, canvas, ctx) {
+      const thumbs = document.getElementById("thumbnails");
+      const images = [];
+      thumbs.innerHTML = "";
+      canvas.width = 1280;
+      canvas.height = 720;
+      let index = 0;
+      video.onseeked = function() {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const img = new Image();
+        img.src = canvas.toDataURL("image/jpeg");
+        thumbs.appendChild(img);
+        images.push(img.src);
+        index++;
+        if (index < times.length) {
+          video.currentTime = times[index];
+        } else {
+          findBestThumbnail(images);
+        }
+      };
+      video.currentTime = times[0];
     }
-    
-    async function analyzeImage(dataURL) {
+    function findBestThumbnail(images) {
+      if (images.length === 0) return;
+      let bestImage = images[0], bestScore = -Infinity, processed = 0;
+      images.forEach(src => {
+        analyzeImage(src).then(score => {
+          processed++;
+          if (score > bestScore) { bestScore = score; bestImage = src; }
+          if (processed === images.length) {
+            document.getElementById("bestThumbnail").src = bestImage;
+            document.getElementById("bestThumbnail").style.display = "block";
+            const link = document.getElementById("downloadLink");
+            link.href = bestImage;
+            link.style.display = "block";
+          }
+        }).catch(() => {
+          processed++;
+          if (processed === images.length) {
+            document.getElementById("bestThumbnail").src = bestImage;
+            document.getElementById("bestThumbnail").style.display = "block";
+            const link = document.getElementById("downloadLink");
+            link.href = bestImage;
+            link.style.display = "block";
+          }
+        });
+      });
+    }
+    function analyzeImage(src) {
       return new Promise((resolve, reject) => {
         const img = new Image();
         img.crossOrigin = "Anonymous";
-        img.src = dataURL;
+        img.src = src;
         img.onload = function() {
           const tempCanvas = document.createElement("canvas");
           tempCanvas.width = img.width;
           tempCanvas.height = img.height;
-          const ctx = tempCanvas.getContext("2d");
-          ctx.drawImage(img, 0, 0);
-          const data = ctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height).data;
+          const tctx = tempCanvas.getContext("2d");
+          tctx.drawImage(img, 0, 0);
+          const data = tctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height).data;
           let luminances = [];
           for (let i = 0; i < data.length; i += 4) {
             const r = data[i], g = data[i+1], b = data[i+2];
@@ -145,63 +115,9 @@
           const mean = luminances.reduce((a, b) => a + b, 0) / luminances.length;
           const variance = luminances.reduce((sum, lum) => sum + Math.pow(lum - mean, 2), 0) / luminances.length;
           resolve(Math.sqrt(variance));
-        };
+        }
         img.onerror = reject;
       });
-    }
-    
-    async function getImageHash(dataURL) {
-      return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = "Anonymous";
-        img.src = dataURL;
-        img.onload = () => {
-          const size = 8;
-          const canvas = document.createElement("canvas");
-          canvas.width = size;
-          canvas.height = size;
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(img, 0, 0, size, size);
-          const imageData = ctx.getImageData(0, 0, size, size).data;
-          const pixels = [];
-          for (let i = 0; i < imageData.length; i += 4) {
-            const brightness = (imageData[i] + imageData[i+1] + imageData[i+2]) / 3;
-            pixels.push(brightness);
-          }
-          const avg = pixels.reduce((a, b) => a + b, 0) / pixels.length;
-          let hash = "";
-          pixels.forEach(p => { hash += (p >= avg) ? "1" : "0"; });
-          resolve(hash);
-        };
-        img.onerror = reject;
-      });
-    }
-    
-    function hammingDistance(hash1, hash2) {
-      let dist = 0;
-      for (let i = 0; i < hash1.length; i++) {
-        if (hash1[i] !== hash2[i]) dist++;
-      }
-      return dist;
-    }
-    
-    function isDuplicate(newHash, images) {
-      for (const item of images) {
-        if (hammingDistance(newHash, item.hash) < DUPLICATE_THRESHOLD) return true;
-      }
-      return false;
-    }
-    
-    async function findBestThumbnail(images) {
-      let bestImage = images[0];
-      let bestScore = -Infinity;
-      for (const src of images) {
-        try {
-          const score = await analyzeImage(src);
-          if (score > bestScore) { bestScore = score; bestImage = src; }
-        } catch(e) { console.error(e); }
-      }
-      return bestImage;
     }
   </script>
 </body>
