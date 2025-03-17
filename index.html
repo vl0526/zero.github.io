@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Thumbnail Extractor</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <title>Trích Xuất Thumbnail</title>
+    <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; background: #111; color: #fff; }
@@ -49,7 +49,7 @@
         }
 
         async function loadFaceAPI() {
-            if (!window.faceapi) {
+            if (typeof faceapi === "undefined") {
                 await new Promise(resolve => {
                     let script = document.createElement("script");
                     script.src = "https://cdn.jsdelivr.net/npm/face-api.js";
