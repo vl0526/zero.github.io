@@ -33,7 +33,7 @@
             video.play();
             video.addEventListener("loadedmetadata", () => {
                 let duration = Math.min(video.duration, 150), times = [], count = 0;
-                for (let t = 0; t < duration && count < 30; t += 30, count++) times.push(t);
+                for (let t = 0; t < duration && count < 300; t += 1, count++) times.push(t);
                 captureFrames(video, times, canvas, ctx);
             });
         }
