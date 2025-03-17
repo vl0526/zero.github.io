@@ -3,21 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Thumbnail Extractor</title>
+    <title>Extract Thumbnails</title>
 </head>
 <body>
-    <h2>Trích Xuất Thumbnail Mỗi 5 Giây & Chọn Ảnh Đẹp Nhất</h2>
+    <h2>Trích Xuất Thumbnail</h2>
     <input type="file" id="videoInput" accept="video/*">
     <button onclick="extractThumbnails()">Tạo Thumbnail</button>
     <br><br>
-
-    <h3>Toàn Bộ Ảnh Trích Xuất:</h3>
+    <h3>Ảnh Trích Xuất:</h3>
     <div id="thumbnails"></div>
-
-    <h3>Ảnh Đẹp Nhất:</h3>
-    <img id="bestThumbnail" style="display: none; max-width: 640px;">
-    <br>
-    <a id="downloadLink" style="display: none;" download="best_thumbnail.jpg">Tải ảnh</a>
 
     <script>
         function extractThumbnails() {
@@ -35,7 +29,7 @@
 
             video.addEventListener("loadedmetadata", () => {
                 const duration = Math.min(video.duration, 300); // Tối đa 5 phút (300 giây)
-                const timestamps = generateTimestamps(duration, 5); // Mỗi 5 giây
+                const timestamps = generateTimestamps(duration, 5); // Lấy tại 0s, 5s, 10s, ...
                 captureFrames(video, timestamps);
             });
         }
@@ -56,7 +50,6 @@
 
             const thumbnailsDiv = document.getElementById("thumbnails");
             thumbnailsDiv.innerHTML = "";
-            const images = [];
 
             timestamps.forEach((time, index) => {
                 setTimeout(() => {
@@ -68,41 +61,10 @@
                         img.style.maxWidth = "150px";
                         img.style.margin = "5px";
                         thumbnailsDiv.appendChild(img);
-                        images.push(img.src);
                         video.removeEventListener("seeked", capture);
-
-                        if (images.length === timestamps.length) {
-                            findBestThumbnail(images);
-                        }
                     });
                 }, index * 1000);
             });
-        }
-
-        function findBestThumbnail(images) {
-            let bestImage = images[0];
-            let bestScore = 0;
-
-            images.forEach((image) => {
-                const score = analyzeImage(image);
-                if (score > bestScore) {
-                    bestScore = score;
-                    bestImage = image;
-                }
-            });
-
-            const bestThumbnail = document.getElementById("bestThumbnail");
-            bestThumbnail.src = bestImage;
-            bestThumbnail.style.display = "block";
-
-            const downloadLink = document.getElementById("downloadLink");
-            downloadLink.href = bestImage;
-            downloadLink.style.display = "block";
-            downloadLink.innerText = "Tải ảnh đẹp nhất";
-        }
-
-        function analyzeImage(imageSrc) {
-            return Math.random(); // 🔥 Đơn giản hóa: random score (có thể nâng cấp dùng AI sau)
         }
     </script>
 </body>
