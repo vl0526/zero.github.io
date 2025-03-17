@@ -3,66 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Thumbnail Generator</title>
+    <title>Thumbnail Extractor</title>
 </head>
 <body>
-    <h2>Chuyển Video thành Thumbnail Chuyên Nghiệp</h2>
+    <h2>Trích Xuất Thumbnail Từ Video</h2>
     <input type="file" id="videoInput" accept="video/*">
-    <button onclick="uploadVideo()">Tạo Thumbnail</button>
+    <button onclick="extractThumbnails()">Tạo Thumbnail</button>
     <br><br>
 
-    <h3>Các Thumbnail:</h3>
+    <h3>Ảnh Thumbnail:</h3>
     <div id="thumbnails"></div>
 
-    <h3>Ảnh Đẹp Nhất:</h3>
-    <img id="bestThumbnail" style="display: none; max-width: 640px;">
-    <br>
-    <a id="downloadLink" style="display: none;" download="best_thumbnail.jpg">Tải ảnh đẹp nhất</a>
-
     <script>
-        async function uploadVideo() {
+        function extractThumbnails() {
             const fileInput = document.getElementById("videoInput");
-            if (fileInput.files.length === 0) {
-                alert("Vui lòng chọn video");
+            if (!fileInput.files.length) {
+                alert("Vui lòng chọn video!");
                 return;
             }
 
-            const formData = new FormData();
-            formData.append("video", fileInput.files[0]);
+            const file = fileInput.files[0];
+            const video = document.createElement("video");
+            video.src = URL.createObjectURL(file);
+            video.muted = true;
+            video.play();
 
-            try {
-                const response = await fetch("http://localhost:5000/upload", {
-                    method: "POST",
-                    body: formData,
-                });
-
-                const data = await response.json();
-                if (data.thumbnails) {
-                    displayThumbnails(data.thumbnails);
-                }
-
-                if (data.bestThumbnail) {
-                    const bestImg = data.bestThumbnail;
-                    document.getElementById("bestThumbnail").src = bestImg;
-                    document.getElementById("bestThumbnail").style.display = "block";
-
-                    document.getElementById("downloadLink").href = bestImg;
-                    document.getElementById("downloadLink").style.display = "block";
-                }
-            } catch (error) {
-                alert("Lỗi xử lý video");
-            }
+            video.addEventListener("loadedmetadata", () => {
+                const duration = video.duration;
+                const captureTimes = generateTimestamps(duration, 10);
+                captureFrames(video, captureTimes);
+            });
         }
 
-        function displayThumbnails(thumbnails) {
+        function generateTimestamps(duration, count) {
+            const timestamps = [];
+            for (let i = 1; i <= count; i++) {
+                timestamps.push((i * duration) / (count + 1));
+            }
+            return timestamps;
+        }
+
+        function captureFrames(video, timestamps) {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+            canvas.width = 1280;
+            canvas.height = 720;
+
             const thumbnailsDiv = document.getElementById("thumbnails");
             thumbnailsDiv.innerHTML = "";
-            thumbnails.forEach((thumb) => {
-                const img = document.createElement("img");
-                img.src = `http://localhost:5000/${thumb}`;
-                img.style.maxWidth = "150px";
-                img.style.margin = "5px";
-                thumbnailsDiv.appendChild(img);
+
+            timestamps.forEach((time, index) => {
+                setTimeout(() => {
+                    video.currentTime = time;
+                    video.addEventListener("seeked", function capture() {
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        const img = document.createElement("img");
+                        img.src = canvas.toDataURL("image/jpeg");
+                        img.style.maxWidth = "150px";
+                        img.style.margin = "5px";
+                        thumbnailsDiv.appendChild(img);
+                        video.removeEventListener("seeked", capture);
+                    });
+                }, index * 500);
             });
         }
     </script>
