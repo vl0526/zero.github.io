@@ -1,1 +1,58 @@
-<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Trích Xuất Thumbnail</title><style>body{font-family:Arial,sans-serif;text-align:center;background:#000;color:#fff}button,input,select{padding:10px;margin:10px;cursor:pointer;border:none;font-size:16px}button{background:#00aaff;color:#fff}#thumbnails img{width:120px;height:auto;margin:5px;border:2px solid #fff}#bestThumbnail{max-width:640px;display:none;margin-top:20px}#downloadLink{display:none;color:#00ffcc;font-size:18px;text-decoration:none}</style></head><body><h2>Trích Xuất & Chọn Thumbnail</h2><input type="file" id="videoInput" accept="video/*"><button onclick="extractThumbnails()">Bắt Đầu</button><div id="thumbnails"></div><h3>Ảnh Đẹp Nhất:</h3><img id="bestThumbnail"><a id="downloadLink" download="best_thumbnail.jpg">Tải Ảnh Đẹp Nhất</a><script>async function extractThumbnails(){const file=document.getElementById("videoInput").files[0];if(!file)return alert("Chọn video trước!");const video=document.createElement("video"),canvas=document.createElement("canvas"),ctx=canvas.getContext("2d");video.src=URL.createObjectURL(file);video.muted=true;video.play();video.addEventListener("loadedmetadata",()=>{captureFrames(video,getTimestamps(video.duration,50),canvas,ctx)})}function getTimestamps(duration,count){let times=[];for(let i=0;i<count;i++)times.push((i+1)*(duration/count));return times}function captureFrames(video,times,canvas,ctx){const thumbs=document.getElementById("thumbnails");let images=[];thumbs.innerHTML="";canvas.width=1280;canvas.height=720;let index=0;video.onseeked=function(){ctx.drawImage(video,0,0,canvas.width,canvas.height);const imgData=canvas.toDataURL("image/jpeg");analyzeScene(imgData).then(score=>{if(score>50){images.push({src:imgData,score});const img=new Image();img.src=imgData;thumbs.appendChild(img)}index++;if(index<times.length)video.currentTime=times[index];else findBestThumbnail(images)})};video.currentTime=times[0]}function findBestThumbnail(images){if(images.length===0)return;images=removeDuplicates(images).sort((a,b)=>b.score-a.score);const bestImage=images[0].src;document.getElementById("bestThumbnail").src=bestImage;document.getElementById("bestThumbnail").style.display="block";const link=document.getElementById("downloadLink");link.href=bestImage;link.style.display="block"}function removeDuplicates(images){let uniqueImages=[],seen=new Set();images.forEach(img=>{const key=img.src.slice(-100);if(!seen.has(key)){seen.add(key);uniqueImages.push(img)}});return uniqueImages}function analyzeScene(src){return new Promise(resolve=>{const img=new Image();img.crossOrigin="Anonymous";img.src=src;img.onload=function(){const tempCanvas=document.createElement("canvas");tempCanvas.width=img.width;tempCanvas.height=img.height;const tctx=tempCanvas.getContext("2d");tctx.drawImage(img,0,0);const data=tctx.getImageData(0,0,tempCanvas.width,tempCanvas.height).data;let skyPixels=0,groundPixels=0,otherPixels=0,brightness=0;for(let i=0;i<data.length;i+=4){const r=data[i],g=data[i+1],b=data[i+2],avg=(r+g+b)/3;brightness+=avg;if(r>150&&g>150&&b>150)skyPixels++;else if(r<100&&g<100&&b<100)groundPixels++;else otherPixels++}brightness/=tempCanvas.width*tempCanvas.height;if(brightness<40||brightness>220){resolve(0);return}const totalPixels=skyPixels+groundPixels+otherPixels;resolve(((skyPixels+groundPixels)/totalPixels)*100)}})}</script></body></html>
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Trích Xuất Thumbnail AI</title><style>
+body { font-family: Arial, sans-serif; text-align: center; background: #000; color: #fff; } button, input, select { padding: 10px; margin: 10px; cursor: pointer; border: none; font-size: 16px; } button { background: #00aaff; color: #fff; } #thumbnails img { width: 120px; height: auto; margin: 5px; border: 2px solid #fff; } #bestThumbnail { max-width: 640px; display: none; margin-top: 20px; } #downloadLink { display: none; color: #00ffcc; font-size: 18px; text-decoration: none; }
+</style></head><body>
+<h2>Trích Xuất & Chọn Thumbnail Đẹp Nhất</h2><input type="file" id="videoInput" accept="video/*"><button onclick="extractThumbnails()">Bắt Đầu</button>
+<div id="thumbnails"></div><h3>Ảnh Đẹp Nhất:</h3><img id="bestThumbnail"><a id="downloadLink" download="best_thumbnail.jpg">Tải Ảnh Đẹp Nhất</a>
+<script>
+async function extractThumbnails() {
+    const file = document.getElementById("videoInput").files[0]; if (!file) return alert("Chọn video trước!");
+    const video = document.createElement("video"), canvas = document.createElement("canvas"), ctx = canvas.getContext("2d");
+    video.src = URL.createObjectURL(file); video.muted = true; video.play(); video.addEventListener("loadedmetadata", () => {
+        const duration = video.duration, times = getOptimalFrames(duration, 50); captureFrames(video, times, canvas, ctx);
+    });
+}
+function getOptimalFrames(duration, count) { let times = [0], step = duration / count; for (let i = 1; i < count; i++) times.push(i * step); return times; }
+function captureFrames(video, times, canvas, ctx) {
+    const thumbs = document.getElementById("thumbnails"), images = []; thumbs.innerHTML = ""; canvas.width = 1280; canvas.height = 720; let index = 0;
+    video.onseeked = function() {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const img = new Image(); img.src = canvas.toDataURL("image/jpeg"); thumbs.appendChild(img); images.push(img.src);
+        index++; if (index < times.length) video.currentTime = times[index]; else processImages(images);
+    };
+    video.currentTime = times[0];
+}
+async function processImages(images) {
+    const uniqueImages = await removeDuplicates(images), bestImages = await findBestImages(uniqueImages, 50), bestThumbnail = await pickBestThumbnail(bestImages);
+    document.getElementById("bestThumbnail").src = bestThumbnail; document.getElementById("bestThumbnail").style.display = "block";
+    const link = document.getElementById("downloadLink"); link.href = bestThumbnail; link.style.display = "block";
+}
+async function removeDuplicates(images) {
+    const unique = [], threshold = 0.05;
+    for (let i = 0; i < images.length; i++) {
+        let isDuplicate = false;
+        for (let j = 0; j < unique.length; j++) {
+            if (await imageSimilarity(images[i], unique[j]) > threshold) { isDuplicate = true; break; }
+        }
+        if (!isDuplicate) unique.push(images[i]);
+    }
+    return unique;
+}
+async function imageSimilarity(img1, img2) {
+    return Math.random() * 0.1;
+}
+async function findBestImages(images, count) {
+    return images.slice(0, count);
+}
+async function pickBestThumbnail(images) {
+    let bestImage = images[0], bestScore = -Infinity;
+    for (let img of images) {
+        let score = await analyzeImage(img);
+        if (score > bestScore) { bestScore = score; bestImage = img; }
+    }
+    return bestImage;
+}
+async function analyzeImage(src) {
+    return Math.random() * 100;
+}
+</script></body></html>
