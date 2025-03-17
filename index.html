@@ -3,16 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Trích Xuất Thumbnail</title>
+  <title>Trích Xuất Thumbnail Video</title>
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; background: #111; color: #fff; }
+    body { font-family: Arial, sans-serif; text-align: center; background: #000; color: #fff; }
     button, input, select { padding: 10px; margin: 10px; cursor: pointer; border: none; font-size: 16px; }
     button { background: #00aaff; color: #fff; }
-    #thumbnails img { width: 100px; margin: 5px; }
+    #thumbnails img { width: 120px; height: auto; margin: 5px; border: 2px solid #fff; }
     #bestThumbnail { max-width: 640px; display: none; margin-top: 20px; }
     #downloadLink { display: none; color: #00ffcc; font-size: 18px; text-decoration: none; }
   </style>
-  <!-- Tải TensorFlow.js & face-api.js theo dạng ES module -->
   <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.21.0/dist/tf.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 </head>
@@ -35,7 +34,6 @@
     async function extractThumbnails() {
       const file = document.getElementById("videoInput").files[0];
       if (!file) return alert("Chọn video trước!");
-      // Load model tinyFaceDetector từ URL công khai
       await faceapi.nets.tinyFaceDetector.loadFromUri("https://justadudewhohacks.github.io/face-api.js/models");
 
       const video = document.createElement("video");
@@ -45,7 +43,6 @@
       video.muted = true;
       video.play();
       video.addEventListener("loadedmetadata", () => {
-        // Dùng mỗi 5 giây, nếu video dài hơn thì trích xuất tối đa số frame theo lựa chọn
         const duration = Math.min(video.duration, 300);
         const count = parseInt(document.getElementById("thumbnailCount").value);
         const times = [];
