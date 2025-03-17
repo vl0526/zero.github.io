@@ -27,61 +27,79 @@
   <h3>Ảnh Đẹp Nhất:</h3>
   <img id="bestThumbnail">
   <a id="downloadLink" download="best_thumbnail.jpg">Tải Ảnh Đẹp Nhất</a>
-
+  
   <script>
-    // Ngưỡng Hamming distance để coi ảnh là trùng lặp
+    // Ngưỡng để coi ảnh trùng lặp (Hamming distance) và ngưỡng độ tương phản tối thiểu
     const DUPLICATE_THRESHOLD = 10;
-    
+    const MIN_CONTRAST = 20;
+
     async function startExtraction() {
       const file = document.getElementById("videoInput").files[0];
-      if (!file) return alert("Chọn video trước!");
+      if (!file) { alert("Chọn video trước!"); return; }
+      const desiredCount = parseInt(document.getElementById("thumbnailCount").value);
+      const videoURL = URL.createObjectURL(file);
       
-      // Tạo video tạm để lấy duration
+      // Dùng video tạm để lấy độ dài (duration)
       const tempVideo = document.createElement("video");
-      tempVideo.src = URL.createObjectURL(file);
+      tempVideo.src = videoURL;
       tempVideo.muted = true;
       await tempVideo.play();
       await new Promise(res => tempVideo.addEventListener("loadedmetadata", res));
-      
       const duration = Math.min(tempVideo.duration, 300);
-      const desiredCount = parseInt(document.getElementById("thumbnailCount").value);
       const baseInterval = 5;
       let interval = baseInterval;
-      if(duration / desiredCount < baseInterval) {
-        interval = duration / desiredCount;
-      }
+      if (duration / desiredCount < baseInterval) interval = duration / desiredCount;
       
-      // Khởi tạo danh sách thời điểm ban đầu
+      // Tạo mảng các thời điểm ban đầu
       let times = [];
-      for (let t = 0; t < duration && times.length < desiredCount; t += interval) {
+      for (let t = 0; t < duration; t += interval) {
         times.push(t);
       }
       
       const uniqueImages = [];
-      // Sử dụng hàm async để trích xuất liên tục cho đến khi đủ ảnh duy nhất hoặc hết video
       let currentIndex = 0;
+      // Quét lần đầu theo mảng thời điểm ban đầu
       while(uniqueImages.length < desiredCount && currentIndex < times.length) {
-        const dataURL = await captureFrameAtTime(URL.createObjectURL(file), times[currentIndex]);
-        const hash = await getImageHash(dataURL);
-        if(!isDuplicate(hash, uniqueImages)) {
-          uniqueImages.push({ src: dataURL, hash });
+        const dataURL = await captureFrameAtTime(videoURL, times[currentIndex]);
+        // Kiểm tra độ tương phản (loại bỏ khung cảnh tối, nhạt)
+        try {
+          const contrast = await analyzeImage(dataURL);
+          if (contrast < MIN_CONTRAST) {
+            console.log(`Frame tại ${times[currentIndex]} giây bị loại do độ tương phản thấp: ${contrast}`);
+            currentIndex++;
+            continue;
+          }
+        } catch(e) { currentIndex++; continue; }
+        // Tính hash ảnh và kiểm tra trùng lặp
+        let hash;
+        try {
+          hash = await getImageHash(dataURL);
+        } catch(e) { currentIndex++; continue; }
+        if (!isDuplicate(hash, uniqueImages)) {
+          uniqueImages.push({ src: dataURL, hash: hash });
           displayThumbnail(dataURL);
         }
         currentIndex++;
       }
-      // Nếu chưa đủ, thử tiếp các thời điểm sau cùng
+      // Nếu chưa đủ, tiếp tục trích xuất từ thời điểm sau mảng ban đầu
       let extraTime = times[times.length - 1] + interval;
       while(uniqueImages.length < desiredCount && extraTime < duration) {
-        const dataURL = await captureFrameAtTime(URL.createObjectURL(file), extraTime);
-        const hash = await getImageHash(dataURL);
-        if(!isDuplicate(hash, uniqueImages)) {
-          uniqueImages.push({ src: dataURL, hash });
+        const dataURL = await captureFrameAtTime(videoURL, extraTime);
+        try {
+          const contrast = await analyzeImage(dataURL);
+          if (contrast < MIN_CONTRAST) { extraTime += interval; continue; }
+        } catch(e) { extraTime += interval; continue; }
+        let hash;
+        try {
+          hash = await getImageHash(dataURL);
+        } catch(e) { extraTime += interval; continue; }
+        if (!isDuplicate(hash, uniqueImages)) {
+          uniqueImages.push({ src: dataURL, hash: hash });
           displayThumbnail(dataURL);
         }
         extraTime += interval;
       }
-      
-      // Sau khi có danh sách ảnh duy nhất, chọn ảnh đẹp nhất dựa trên độ tương phản (std luminance)
+      // Chọn ra ảnh đẹp nhất dựa trên độ tương phản (std luminance cao hơn)
       const bestImage = await findBestThumbnail(uniqueImages.map(item => item.src));
       document.getElementById("bestThumbnail").src = bestImage;
       document.getElementById("bestThumbnail").style.display = "block";
@@ -118,6 +136,32 @@
       container.appendChild(img);
     }
     
+    async function analyzeImage(dataURL) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "Anonymous";
+        img.src = dataURL;
+        img.onload = function() {
+          const tempCanvas = document.createElement("canvas");
+          tempCanvas.width = img.width;
+          tempCanvas.height = img.height;
+          const ctx = tempCanvas.getContext("2d");
+          ctx.drawImage(img, 0, 0);
+          const data = ctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height).data;
+          let luminances = [];
+          for (let i = 0; i < data.length; i += 4) {
+            const r = data[i], g = data[i+1], b = data[i+2];
+            const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+            luminances.push(lum);
+          }
+          const mean = luminances.reduce((a, b) => a + b, 0) / luminances.length;
+          const variance = luminances.reduce((sum, lum) => sum + Math.pow(lum - mean, 2), 0) / luminances.length;
+          resolve(Math.sqrt(variance));
+        }
+        img.onerror = reject;
+      });
+    }
+    
     async function getImageHash(dataURL) {
       return new Promise((resolve, reject) => {
         const img = new Image();
@@ -132,15 +176,13 @@
           ctx.drawImage(img, 0, 0, size, size);
           const imageData = ctx.getImageData(0, 0, size, size).data;
           const pixels = [];
-          for(let i = 0; i < imageData.length; i += 4) {
+          for (let i = 0; i < imageData.length; i += 4) {
             const brightness = (imageData[i] + imageData[i+1] + imageData[i+2]) / 3;
             pixels.push(brightness);
           }
-          const avg = pixels.reduce((a,b)=>a+b,0) / pixels.length;
+          const avg = pixels.reduce((a, b) => a + b, 0) / pixels.length;
           let hash = "";
-          pixels.forEach(p => {
-            hash += (p >= avg) ? "1" : "0";
-          });
+          pixels.forEach(p => { hash += (p >= avg) ? "1" : "0"; });
           resolve(hash);
         };
         img.onerror = reject;
@@ -149,53 +191,26 @@
     
     function hammingDistance(hash1, hash2) {
       let dist = 0;
-      for(let i = 0; i < hash1.length; i++){
-        if(hash1[i] !== hash2[i]) dist++;
+      for (let i = 0; i < hash1.length; i++) {
+        if (hash1[i] !== hash2[i]) dist++;
       }
       return dist;
     }
     
-    // Kiểm tra xem hash của ảnh mới có trùng với ảnh nào trong danh sách chưa
     function isDuplicate(newHash, images) {
-      for(const item of images) {
-        if(hammingDistance(newHash, item.hash) < DUPLICATE_THRESHOLD) return true;
+      for (const item of images) {
+        if (hammingDistance(newHash, item.hash) < DUPLICATE_THRESHOLD) return true;
       }
       return false;
-    }
-    
-    async function analyzeImage(dataURL) {
-      return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = "Anonymous";
-        img.src = dataURL;
-        img.onload = () => {
-          const tempCanvas = document.createElement("canvas");
-          tempCanvas.width = img.width;
-          tempCanvas.height = img.height;
-          const ctx = tempCanvas.getContext("2d");
-          ctx.drawImage(img, 0, 0);
-          const data = ctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height).data;
-          let luminances = [];
-          for(let i = 0; i < data.length; i += 4){
-            const r = data[i], g = data[i+1], b = data[i+2];
-            const lum = 0.299*r + 0.587*g + 0.114*b;
-            luminances.push(lum);
-          }
-          const mean = luminances.reduce((a,b) => a+b, 0) / luminances.length;
-          const variance = luminances.reduce((sum, lum) => sum + Math.pow(lum - mean, 2), 0) / luminances.length;
-          resolve(Math.sqrt(variance));
-        };
-        img.onerror = reject;
-      });
     }
     
     async function findBestThumbnail(images) {
       let bestImage = images[0];
       let bestScore = -Infinity;
-      for(const src of images) {
+      for (const src of images) {
         try {
           const score = await analyzeImage(src);
-          if(score > bestScore) { bestScore = score; bestImage = src; }
+          if (score > bestScore) { bestScore = score; bestImage = src; }
         } catch(e) { console.error(e); }
       }
       return bestImage;
