@@ -3,13 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Generator-01</title>
+  <title>SuperPro Video Thumbnail Generator</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; font-family: 'Roboto', sans-serif; background: #121212; color: #fff; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+    body {
+      margin: 0; font-family: 'Roboto', sans-serif; background: #121212; color: #fff;
+      display: flex; flex-direction: column; align-items: center; padding: 20px;
+    }
     h1 { margin-bottom: 10px; }
     .container { max-width: 800px; width: 100%; }
     .input-group { margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center; }
@@ -17,6 +20,7 @@
     button { padding: 10px 20px; background: #00aaff; border: none; border-radius: 4px; color: #fff; cursor: pointer; font-weight: bold; }
     button:hover { background: #008ecc; }
     #loader { margin: 10px; font-size: 16px; }
+    #progress { margin: 10px; }
     #thumbnails { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; justify-content: center; }
     #thumbnails img { width: 150px; height: auto; border: 2px solid #fff; border-radius: 4px; }
     .best-container { text-align: center; margin-top: 20px; }
@@ -37,7 +41,8 @@
       </select>
       <button onclick="startExtraction()">Generate Thumbnails</button>
     </div>
-    <div id="loader"></div>
+    <div id="loader">Processing...</div>
+    <div id="progress"></div>
     <div id="thumbnails"></div>
     <div class="best-container">
       <h2>Best Thumbnail</h2>
@@ -48,17 +53,20 @@
   </div>
   <script>
     async function startExtraction() {
-      document.getElementById("loader").innerText = "Processing...";
+      const loader = document.getElementById("loader");
+      const progress = document.getElementById("progress");
+      loader.innerText = "Processing...";
+      progress.innerText = "";
       document.getElementById("thumbnails").innerHTML = "";
       document.getElementById("bestThumbnail").style.display = "none";
       document.getElementById("downloadLink").style.display = "none";
       
       const file = document.getElementById("videoInput").files[0];
-      if (!file) { alert("Please select a video file."); document.getElementById("loader").innerText = ""; return; }
+      if (!file) { alert("Please select a video file."); loader.innerText = ""; return; }
       const count = parseInt(document.getElementById("thumbnailCount").value);
       const fileURL = URL.createObjectURL(file);
       
-      // Sử dụng một video element tạm để lấy duration
+      // Tạo một video element tạm để lấy duration
       const tempVideo = document.createElement("video");
       tempVideo.src = fileURL;
       tempVideo.muted = true;
@@ -72,19 +80,22 @@
         times.push(t);
       }
       
-      // Đồng thời trích xuất frame cho mỗi timestamp
-      const promises = times.map(time =>
-        captureFrameAtTime(fileURL, time).then(dataURL => { displayThumbnail(dataURL); return dataURL; })
-      );
-      const images = await Promise.all(promises);
-      
+      const images = [];
+      for (let i = 0; i < times.length; i++) {
+        progress.innerText = `Extracting thumbnail ${i+1} of ${times.length}...`;
+        const dataURL = await captureFrameAtTime(fileURL, times[i]);
+        images.push(dataURL);
+        displayThumbnail(dataURL);
+      }
+      progress.innerText = "Selecting best thumbnail...";
       const bestImage = await findBestThumbnail(images);
       document.getElementById("bestThumbnail").src = bestImage;
       document.getElementById("bestThumbnail").style.display = "block";
       const link = document.getElementById("downloadLink");
       link.href = bestImage;
       link.style.display = "inline-block";
-      document.getElementById("loader").innerText = "";
+      loader.innerText = "";
+      progress.innerText = "";
     }
     
     function captureFrameAtTime(fileURL, time) {
@@ -148,7 +159,6 @@
       for (const dataURL of images) {
         try {
           const score = await analyzeImage(dataURL);
-          // Ảnh có độ tương phản cao hơn (std cao hơn) được xem là đẹp hơn
           if (score > bestScore) { bestScore = score; bestImage = dataURL; }
         } catch (e) { console.error(e); }
       }
