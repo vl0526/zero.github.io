@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Thumbnail Extractor</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; background: #111; color: #fff; }
-        h2 { margin-top: 20px; }
-        button { padding: 10px 20px; margin: 10px; cursor: pointer; border: none; background: #00aaff; color: #fff; font-size: 16px; }
-        input { padding: 10px; }
+        button, input { padding: 10px; margin: 10px; cursor: pointer; border: none; font-size: 16px; }
+        button { background: #00aaff; color: #fff; }
         #thumbnails img { width: 100px; margin: 5px; }
         #bestThumbnail { max-width: 640px; display: none; margin-top: 20px; }
-        #downloadLink { display: none; color: #00ffcc; font-size: 18px; text-decoration: none; margin-top: 10px; display: block; }
+        #downloadLink { display: none; color: #00ffcc; font-size: 18px; text-decoration: none; }
     </style>
 </head>
 <body>
@@ -32,8 +32,8 @@
             video.muted = true;
             video.play();
             video.addEventListener("loadedmetadata", () => {
-                let duration = Math.min(video.duration, 150), times = [];
-                for (let t = 0; t < duration && times.length < 30; t += 5) times.push(t);
+                let duration = Math.min(video.duration, 150), times = [], count = 0;
+                for (let t = 0; t < duration && count < 30; t += 5, count++) times.push(t);
                 captureFrames(video, times, canvas, ctx);
             });
         }
@@ -42,8 +42,11 @@
             let thumbs = document.getElementById("thumbnails"), images = [];
             thumbs.innerHTML = "";
             canvas.width = 1280; canvas.height = 720;
-            times.forEach((t, i) => setTimeout(() => {
-                video.currentTime = t;
+            let index = 0;
+
+            function captureNext() {
+                if (index >= times.length) return findBestThumbnail(images);
+                video.currentTime = times[index];
                 video.addEventListener("seeked", function snap() {
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                     let img = new Image();
@@ -52,9 +55,11 @@
                     thumbs.appendChild(img);
                     images.push(img.src);
                     video.removeEventListener("seeked", snap);
-                    if (images.length === times.length) findBestThumbnail(images);
+                    index++;
+                    captureNext();
                 });
-            }, i * 500));
+            }
+            captureNext();
         }
 
         async function findBestThumbnail(images) {
@@ -78,6 +83,5 @@
             return tensor;
         }
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
 </body>
 </html>
