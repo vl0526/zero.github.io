@@ -33,7 +33,7 @@
             video.play();
             video.addEventListener("loadedmetadata", () => {
                 let duration = Math.min(video.duration, 150), times = [], count = 0;
-                for (let t = 0; t < duration && count < 30; t += 5, count++) times.push(t);
+                for (let t = 0; t < duration && count < 30; t += 30, count++) times.push(t);
                 captureFrames(video, times, canvas, ctx);
             });
         }
@@ -51,7 +51,7 @@
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                     let img = new Image();
                     img.src = canvas.toDataURL("image/jpeg");
-                    img.style.margin = "5px";
+                    img.style.margin = "8px";
                     thumbs.appendChild(img);
                     images.push(img.src);
                     video.removeEventListener("seeked", snap);
