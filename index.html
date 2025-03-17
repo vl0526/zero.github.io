@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Trích Xuất Thumbnail AI</title><style>
-body { font-family: Arial, sans-serif; text-align: center; background: #000; color: #fff; } button, input, select { padding: 10px; margin: 10px; cursor: pointer; border: none; font-size: 16px; } button { background: #00aaff; color: #fff; } #thumbnails img { width: 120px; height: auto; margin: 5px; border: 2px solid #fff; } #bestThumbnail { max-width: 640px; display: none; margin-top: 20px; } #downloadLink { display: none; color: #00ffcc; font-size: 18px; text-decoration: none; }
+<html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>AI Thumbnail Extractor</title><style>
+body { font-family: Arial, sans-serif; text-align: center; background: #000; color: #fff; } button, input { padding: 10px; margin: 10px; cursor: pointer; border: none; font-size: 16px; } button { background: #00aaff; color: #fff; } #thumbnails img { width: 120px; height: auto; margin: 5px; border: 2px solid #fff; } #bestThumbnail { max-width: 640px; display: none; margin-top: 20px; } #downloadLink { display: none; color: #00ffcc; font-size: 18px; text-decoration: none; }
 </style></head><body>
-<h2>Trích Xuất & Chọn Thumbnail Đẹp Nhất</h2><input type="file" id="videoInput" accept="video/*"><button onclick="extractThumbnails()">Bắt Đầu</button>
+<h2>Trích Xuất & Chọn Thumbnail AI</h2><input type="file" id="videoInput" accept="video/*"><button onclick="extractThumbnails()">Bắt Đầu</button>
 <div id="thumbnails"></div><h3>Ảnh Đẹp Nhất:</h3><img id="bestThumbnail"><a id="downloadLink" download="best_thumbnail.jpg">Tải Ảnh Đẹp Nhất</a>
 <script>
 async function extractThumbnails() {
@@ -23,36 +23,47 @@ function captureFrames(video, times, canvas, ctx) {
     video.currentTime = times[0];
 }
 async function processImages(images) {
-    const uniqueImages = await removeDuplicates(images), bestImages = await findBestImages(uniqueImages, 50), bestThumbnail = await pickBestThumbnail(bestImages);
+    const uniqueImages = await removeDuplicates(images), bestImages = await scoreImages(uniqueImages, 50), bestThumbnail = bestImages[0];
     document.getElementById("bestThumbnail").src = bestThumbnail; document.getElementById("bestThumbnail").style.display = "block";
     const link = document.getElementById("downloadLink"); link.href = bestThumbnail; link.style.display = "block";
 }
 async function removeDuplicates(images) {
-    const unique = [], threshold = 0.05;
-    for (let i = 0; i < images.length; i++) {
+    const unique = [], threshold = 0.9;
+    for (let img of images) {
         let isDuplicate = false;
-        for (let j = 0; j < unique.length; j++) {
-            if (await imageSimilarity(images[i], unique[j]) > threshold) { isDuplicate = true; break; }
-        }
-        if (!isDuplicate) unique.push(images[i]);
+        for (let u of unique) { if (await compareImages(img, u) > threshold) { isDuplicate = true; break; } }
+        if (!isDuplicate) unique.push(img);
     }
     return unique;
 }
-async function imageSimilarity(img1, img2) {
-    return Math.random() * 0.1;
+async function compareImages(img1, img2) {
+    const c1 = document.createElement("canvas"), ctx1 = c1.getContext("2d"), i1 = await loadImage(img1);
+    const c2 = document.createElement("canvas"), ctx2 = c2.getContext("2d"), i2 = await loadImage(img2);
+    c1.width = c2.width = 64; c1.height = c2.height = 64; ctx1.drawImage(i1, 0, 0, 64, 64); ctx2.drawImage(i2, 0, 0, 64, 64);
+    const d1 = ctx1.getImageData(0, 0, 64, 64).data, d2 = ctx2.getImageData(0, 0, 64, 64).data;
+    let diff = 0; for (let i = 0; i < d1.length; i += 4) diff += Math.abs(d1[i] - d2[i]) + Math.abs(d1[i + 1] - d2[i + 1]) + Math.abs(d1[i + 2] - d2[i + 2]);
+    return 1 - diff / (64 * 64 * 3 * 255);
 }
-async function findBestImages(images, count) {
-    return images.slice(0, count);
-}
-async function pickBestThumbnail(images) {
-    let bestImage = images[0], bestScore = -Infinity;
-    for (let img of images) {
-        let score = await analyzeImage(img);
-        if (score > bestScore) { bestScore = score; bestImage = img; }
-    }
-    return bestImage;
+async function scoreImages(images, count) {
+    let scored = [];
+    for (let img of images) scored.push({ src: img, score: await analyzeImage(img) });
+    scored.sort((a, b) => b.score - a.score);
+    return scored.slice(0, count).map(i => i.src);
 }
 async function analyzeImage(src) {
-    return Math.random() * 100;
+    const img = await loadImage(src), canvas = document.createElement("canvas"), ctx = canvas.getContext("2d");
+    canvas.width = img.width; canvas.height = img.height; ctx.drawImage(img, 0, 0);
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    let brightness = 0, colorfulness = 0, contrast = 0, skyPixels = 0, groundPixels = 0;
+    for (let i = 0; i < data.length; i += 4) {
+        const r = data[i], g = data[i + 1], b = data[i + 2], lum = 0.299 * r + 0.587 * g + 0.114 * b;
+        brightness += lum; colorfulness += Math.max(r, g, b) - Math.min(r, g, b);
+        if (i < data.length / 2) { if (b > g && b > r) skyPixels++; } else { if (g > r && g > b) groundPixels++; }
+    }
+    brightness /= data.length / 4; colorfulness /= data.length / 4;
+    contrast = Math.sqrt(data.reduce((a, v, i) => i % 4 === 0 ? a + Math.pow(v - brightness, 2) : a, 0) / (data.length / 4));
+    const skyRatio = skyPixels / (data.length / 4), groundRatio = groundPixels / (data.length / 4);
+    return brightness * 0.4 + colorfulness * 0.3 + contrast * 0.2 + (skyRatio + groundRatio) * 0.5;
 }
+function loadImage(src) { return new Promise(res => { const img = new Image(); img.src = src; img.onload = () => res(img); }); }
 </script></body></html>
