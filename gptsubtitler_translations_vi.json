@@ -611,13 +611,7 @@
   "Your OpenAI API key does not have permission to use the specified resource.": "Khóa API OpenAI của bạn không có quyền sử dụng tài nguyên được chỉ định.",
   "Your Qwen API key does not have permission to use the specified resource.": "Khóa API Qwen của bạn không có quyền sử dụng tài nguyên được chỉ định.",
   "Your xAI API key does not have permission to use the specified resource.": "Khóa API xAI của bạn không có quyền sử dụng tài nguyên được chỉ định."
-}
-```
-
-```json
-{
-  "web": "https://gptsubtitler.com/update-log",
-  "-": "-",
+},
   "🚀 Launched on Product Hunt!": "🚀 Ra mắt trên Product Hunt!",
   "Account & Settings": "Tài khoản & Cài đặt",
   "Add 'Redeem Code' feature to redeem a code for free tokens. User can get the code from the completion of the survey or other events": "Thêm tính năng 'Mã Quy đổi' để nhận token miễn phí. Người dùng có thể nhận mã từ khảo sát hoặc sự kiện khác",
