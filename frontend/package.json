@@ -1,0 +1,12 @@
+{
+  "name": "subtitle-frontend",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "serve src -l 3000"
+  },
+  "devDependencies": {
+    "serve": "^14.0.1",
+    "typescript": "^4.0.0"
+  }
+}
